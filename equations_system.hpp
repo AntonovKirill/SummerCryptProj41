@@ -9,26 +9,32 @@
 
 class literal {
     private:
-        std::pair<bool, bool> lit;
+        int id;
+        char value;
 
         literal();
         literal(bool x);
 
         ~literal();
 
-    publick:
+    public:
         bool is_known();
+        
+        void set_value(int x);
+        void set_neg_value();
 
-        void set_x(int x);
-        void set_neg_x(int neg_x);
-
-        bool get_x() const;
-        bool get_neg_x() const;
+        char get_value() const;
+        char get_neg_value() const;
 };
 
 class equation {
     private:
-        
+        bool Is_line;
+        int param_num;
+        std::vector<literal>;
+
+    public:
+        is_linear();
 };
 
 class MQS_system {
