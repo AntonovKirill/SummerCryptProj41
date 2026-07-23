@@ -7,42 +7,44 @@
 #include <string>
 #include <utility>
 
-class literal {
-    private:
-        int id;
-        char value;
+class literal
+{
+private:
+    int id;
+    char value;
 
-        literal();
-        literal(int id, char value);
+    literal();
+    literal(int id, char value);
 
-        ~literal();
+    ~literal();
 
-    public:
-        bool is_known();
-        
-        void set_value(char value);
+public:
+    bool is_known();
 
-        char get_id() const;
-        char get_value() const;
+    void set_value(char value);
+
+    char get_id() const;
+    char get_value() const;
 };
 
-class equation {
-    private:
-        bool Is_line;
-        int param_num;
-        std::vector<literal>;
+class equation
+{
+private:
+    bool Is_line;
+    int param_num;
+    std::vector<literal>;
 
-        equation();
-        equation(param_num);
-        equation(IS_line, param_num);
-        ~equation();
+    equation();
+    equation(param_num);
+    equation(IS_line, param_num);
+    ~equation();
 
-
-    public:
-        is_linear();
+public:
+    is_linear();
 };
 
-class MQS_system {
+class MQS_system
+{
 private:
     unsigned int param_num;
     std::vector<equation> equations;
@@ -53,11 +55,10 @@ private:
     ~MQS_system();
 
 public:
-    MQS_system* create(std::string filename);
-    MQS_system* create(std::vector<equation> equations);
+    MQS_system *create(std::string filename);
+    MQS_system *create(std::vector<equation> equations);
 
-
-    void destroy(MQS_system* instance);
+    void destroy(MQS_system *instance);
 
     MQS_system unit_propagation();
     void add_equation(equation eq);
