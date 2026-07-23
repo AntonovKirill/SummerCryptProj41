@@ -3,46 +3,54 @@
 
 #include <iostream>
 #include <vector>
+#include <bool>
+#include <string>
+#include <utility>
 
 class literal {
+    private:
+        std::pair<bool, bool> lit;
+
+        literal();
+        literal(bool x);
+
+        ~literal();
+
+    publick:
+        bool is_known();
+
+        void set_x(int x);
+        void set_neg_x(int neg_x);
+
+        bool get_x() const;
+        bool get_neg_x() const;
+};
+
+class equation {
+    private:
+        
 };
 
 class MQS_system {
 private:
-    unsigned int maximum_variable_index;
-    unsigned int number_of_inputs;
-    unsigned int number_of_latches = 0;
-    unsigned int number_of_outputs;
-    unsigned int number_of_AND_gates;
-    std::vector(literal) inputs;
-    std::vector(literal) outputs;
-    std::vector(literal[3]) AND_gates;
+    unsigned int param_num;
+    std::vector<equation> equations;
 
-    void set_maximum_variable_index(int value);
-    void set_number_of_inputs(int value);
-    void set_number_of_outputs(int value);
-    void set_number_of_AND_gates(int value);
+    MQS_system();
+    MQS_system(std::vector<equation> equations);
 
-    int get_maximum_variable_index() const;
-    int get_number_of_inputs() const;
-    int get_number_of_outputs() const;
-    int get_number_of_AND_gates() const;
-
-    MQS_encoding();
-    MQS_encoding(int max_var_idx, int num_outputs);
-    MQS_encoding(int max_var_idx, int num_outputs, int num_inputs);
-    MQS_encoding(int max_var_idx, int num_outputs, int num_inputs, int num_and_gates);
-
-    ~MQS_encoding();
+    ~MQS_system();
 
 public:
-    MQS_encoding* create();
-    MQS_encoding* create(int max_var_idx, int num_outputs);
-    MQS_encoding* create(int max_var_idx, int num_outputs, int num_inputs);
-    MQS_encoding* create(int max_var_idx, int num_outputs, int num_inputs, int num_and_gates);
+    MQS_system* create(std::string filename);
+    MQS_system* create(std::vector<equation> equations);
 
-    void destroy(MQS_encoding* instance);
 
+    void destroy(MQS_system* instance);
+
+    MQS_system unit_propagation();
+    void add_equation(equation eq);
+    bool is_linear();
 };
 
 #endif
