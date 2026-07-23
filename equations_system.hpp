@@ -13,18 +13,17 @@ class literal {
         char value;
 
         literal();
-        literal(bool x);
+        literal(int id, char value);
 
         ~literal();
 
     public:
         bool is_known();
         
-        void set_value(int x);
-        void set_neg_value();
+        void set_value(char value);
 
+        char get_id() const;
         char get_value() const;
-        char get_neg_value() const;
 };
 
 class equation {
