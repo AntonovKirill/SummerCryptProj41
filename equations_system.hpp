@@ -14,9 +14,9 @@ private:
     unsigned int number_of_latches = 0;
     unsigned int number_of_outputs;
     unsigned int number_of_AND_gates;
-    std::vector(unsigned int) inputs;
-    std::vector(unsigned int) outputs;
-    std::vector(unsigned int[3]) AND_gates;
+    std::vector(literal) inputs;
+    std::vector(literal) outputs;
+    std::vector(literal[3]) AND_gates;
 
     void set_maximum_variable_index(int value);
     void set_number_of_inputs(int value);
