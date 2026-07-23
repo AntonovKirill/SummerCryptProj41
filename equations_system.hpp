@@ -32,6 +32,12 @@ class equation {
         int param_num;
         std::vector<literal>;
 
+        equation();
+        equation(param_num);
+        equation(IS_line, param_num);
+        ~equation();
+
+
     public:
         is_linear();
 };
