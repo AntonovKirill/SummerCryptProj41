@@ -44,9 +44,13 @@ void linearizing_set::process_tasks(MQS_system &mqs) // перебор 2^m по�
             current_mqs.substitute(literals_set[i]);
         }
         current_mqs = current_mqs.unit_propagation();
-        if (current_mqs.is_linear())
+        if (current_mqs.is_linear() == 0)
         {
-            // Запуск алгоритма Гаусса для линейной системы над F_2
+            bool is_inconsistent = current_mqs.solve_gauss();
+            if (!is_inconsistent) // если 0 (совместна)
+            {
+                std::cout << "Подзадача " << task_index << " успешно решена!\n";
+            }
         }
     }
 }
