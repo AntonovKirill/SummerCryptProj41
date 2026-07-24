@@ -18,8 +18,9 @@ bool MQS_system::solve_gauss()
     for (size_t i = 0; i < n_eqs; ++i)
     {
         std::vector<literal *> lits = equations[i].get_param_form(); // берем список его литералов
-        for (literal *lit : lits)
+        for (size_t j = 0; j < lits.size(); ++j)
         {
+            literal *lit = lits[j];
             int var_index = lit->get_id() / 2; // вычисляем индекс переменной
             if (var_index < n_vars)
             {
