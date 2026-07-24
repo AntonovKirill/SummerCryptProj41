@@ -3,7 +3,6 @@
 
 #include <iostream> //console (in/out) stream
 #include <cstdint>  //std::uint8_t
-#include <bool>     //bool
 #include <string>   //std::string
 #include <vector>   //std::vector
 
