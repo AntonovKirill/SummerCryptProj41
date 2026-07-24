@@ -6,11 +6,11 @@ bool MQS_system::solve_gauss()
 {
     if (this->is_linear() != 0) // проверка линейности системы
     {
-        return true;
+        return 1;
     }
     size_t n_eqs = equations.size(); // кол-во уравнений в с-ме
     if (n_eqs == 0)
-        return false;
+        return 0;
 
     size_t n_vars = param_num.size(); // кол-во переменных в с-ме (размерность)
     std::vector<std::vector<uint8_t>> matrix(n_eqs, std::vector<uint8_t>(n_vars + 1, 0));
@@ -69,9 +69,9 @@ bool MQS_system::solve_gauss()
         }
         if (all_zeros && matrix[r][n_vars] == 1)
         {
-            return true;
+            return 1;
         }
     }
 
-    return false;
+    return 0;
 }
