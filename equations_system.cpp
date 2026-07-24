@@ -1,6 +1,6 @@
 #include "equations_system.hpp"
 #include <vector>
-#include <algorithm>
+#include <algorithm> // для swap
 
 bool MQS_system::solve_gauss()
 {
@@ -8,27 +8,28 @@ bool MQS_system::solve_gauss()
     {
         return true;
     }
-    size_t n_eqs = equations.size();
+    size_t n_eqs = equations.size(); // кол-во уравнений в с-ме
     if (n_eqs == 0)
         return false;
 
-    size_t n_vars = param_num.size();
+    size_t n_vars = param_num.size(); // кол-во переменных в с-ме (размерность)
     std::vector<std::vector<uint8_t>> matrix(n_eqs, std::vector<uint8_t>(n_vars + 1, 0));
+    // двумерный вектор размером n_eqs строк на n_vars + 1 столбцов (+1 для свободных членов)
     for (size_t i = 0; i < n_eqs; ++i)
     {
-        std::vector<literal *> lits = equations[i].get_param_form();
+        std::vector<literal *> lits = equations[i].get_param_form(); // берем список его литералов
         for (literal *lit : lits)
         {
-            int var_index = lit->get_id() / 2;
+            int var_index = lit->get_id() / 2; // вычисляем индекс переменной
             if (var_index < n_vars)
             {
-                matrix[i][var_index] ^= 1;
+                matrix[i][var_index] ^= 1; // ставим 1 в соотв ячейку матрицы (xor чтобы учесть возможное сложение одинаковых переменных)
             }
         }
-        matrix[i][n_vars] = equations[i].get_free_term();
+        matrix[i][n_vars] = equations[i].get_free_term(); // свободный член заполняем
     }
 
-    size_t pivot_row = 0;
+    size_t pivot_row = 0; // индекс опорной строки (в какую строку мы записываем текущий главный элемент)
     for (size_t col = 0; col < n_vars && pivot_row < n_eqs; ++col)
     {
         size_t sel = pivot_row;
@@ -40,8 +41,8 @@ bool MQS_system::solve_gauss()
         {
             continue;
         }
-        std::swap(matrix[pivot_row], matrix[sel]);
-        for (size_t r = 0; r < n_eqs; ++r)
+        std::swap(matrix[pivot_row], matrix[sel]); // перестановка строк
+        for (size_t r = 0; r < n_eqs; ++r)         // обнуление столбца
         {
             if (r != pivot_row && matrix[r][col] == 1)
             {
