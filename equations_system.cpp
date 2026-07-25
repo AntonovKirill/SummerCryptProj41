@@ -1,6 +1,98 @@
 #include "equations_system.hpp"
-#include <vector>
-#include <algorithm> // для swap
+
+literal::literal() : id(0), value(2) {}
+
+literal::literal(int id) : id(id0), value(2) {}
+
+literal::literal(int id, std::uint8_t value0) : id(id0), value(value0) {}
+
+literal::~literal() {}
+
+void literal::set_value(std::uint8_t value0)
+{
+    value = value0;
+}
+
+std::uint8_t literal::get_value() const
+{
+    return value;
+}
+
+literal* literal::create()
+{
+    literal* ret = new literal;
+    return ret;
+}
+
+literal* literal::create(int id0)
+{
+    literal* ret = new literal(id0);
+    return ret;
+}
+
+literal* literal::create(int id0, std::uint8_t value0)
+{
+    literal* ret = new literal(id0, value0);
+    return ret;
+}
+
+void literal::destroy()
+{
+    delete this;
+}
+
+bool literal::is_known()
+{
+    return (value <= 1);
+}
+
+equation::equation() : Is_line(0), param_form() {}
+
+equation::equation(Is_line0) : Is_line(Is_line0), param_form() {}
+
+equation::equation(param_form0) : Is_line(0), param_form(param_form0) {}
+
+equation::equation(Is_line0, param_form0) : Is_line(Is_line0), param_form(param_form0) {}
+
+equation::~equation() {}
+
+equation* equation::create(Is_line0, param_form0)
+{
+    equation* ret = new equation(Is_line0, param_form0);
+    return ret;
+}
+
+void equation::destroy()
+{
+    delete this;
+}
+
+void equation::set_Is_line(bool Is_line0)
+{
+    Is_line = Is_line0;
+}
+
+void equation::set_param_form(std::vector<literal*> param_form0)
+{
+    param_form = param_form0;
+}
+
+bool equation::get_Is_line() const
+{
+    return Is_line;
+}
+
+std::vector<literal*> equation::get_param_form() const
+{
+    return param_form;
+}
+
+bool equation::is_linear()
+{
+    return (Is_line == 1);
+}
+
+
 
 bool MQS_system::solve_gauss()
 {
