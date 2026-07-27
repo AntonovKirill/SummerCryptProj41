@@ -5,25 +5,28 @@
 #include <cstdint>   //std::uint8_t
 #include <string>    //std::string
 #include <vector>    //std::vector
-#include <algorithm> // для swap
+#include <map>       //std::map
+#include <algorithm> //std::swap
+#include <cmath>     //std::pow
 
 class literal {
     private:
         int id;             //Идентификационный номер литерала равный 2i для x_i и 2i+1 для NOT(x_i).
         std::uint8_t value; //Найденное в ходе решения значение.
 
-        literal();
-        literal(int id0);
-        literal(int id0, std::uint8_t value0);
-
         ~literal();
 
     public:
+
+        literal();
+        literal(int id0);
+        literal(int id0, std::uint8_t value0);
+/*
         literal* create();
         literal* create(int id0);
         literal* create(int id0, std::uint8_t value0);
         //Функции выше предназначены для корректного создания создания объекта литерала.
-
+*/
         void destroy();
         //Функция предназначена для корректного удаления объекта литерала.
 
@@ -41,7 +44,7 @@ class equation
 {
 private:
     bool Is_line;                      // В рамках данной работы уравнения могут быть только линейными или квадратичные.
-    std::vector<literal*> param_form;  // Задает порядок литералов в уравнении.
+    std::vector<literal> param_form;   // Задает порядок литералов в уравнении.
     /*
     Переменные выше в рамках данной работы одназначно определяют любое возможное уравнение.
 
@@ -68,25 +71,26 @@ private:
         x1 AND x2 XOR x3 = 0
     */
 
+    ~equation();
+
+public:
+
     equation();
     equation(Is_line0);
     equation(param_form0);
     equation(Is_line0, param_form0);
-
-    ~equation();
-
-public:
+/*
     equation* create(Is_line0, param_form0);
     // Функция выше предназначена для корректного создания создания объекта уравнения.
-
+*/
     void destroy();
     // Функция предназначена для корректного удаления объекта уравнения.
 
     void set_Is_line(bool Is_line0);
-    void set_param_form(std::vector<literal*> param_form0);
+    void set_param_form(std::vector<literal> param_form0);
 
     bool get_Is_line() const;
-    std::vector<literal*> get_param_form() const;
+    std::vector<literal> get_param_form() const;
 
     bool is_linear();
     // Эта функция предназначена для решения системы (и уравнений в частности), реализации логики графа.
@@ -97,27 +101,30 @@ public:
 class MQS_system
 {
 private:
-    std::vector<literal*> param_num;  // Массив указателей литералы используемые системы (и сопряженые им)
+    std::vector<literal> params;      // Массив указателей литералы используемые системы (и сопряженые им)
     std::vector<equation> equations;  // Массив уравнений системы
-
-    MQS_system();
-    MQS_system(std::vector<equation> equations);
 
     ~MQS_system();
 
 public:
-    MQS_system* create(std::string filepath);
-    MQS_system* create(std::vector<equation> equations);
-    // Функции выше предназначены для корректного создания объекта системы.
 
+    MQS_system();
+    MQS_system(std::vector<equation> equations0);
+/*
+    MQS_system* create(std::string filepath);
+    // Функция выше предназначены для корректного создания объекта системы.
+*/
     void destroy();
     // Эта функция предназначена для корректного удаления объекта системы.
 
-    void set_param_num(std::vector<literal> param_num);
-    void set_equations(std::vector<equation> equations);
+    void set_params(std::vector<literal> params0);
+    void set_equations(std::vector<equation> equations0);
 
-    std::vector<literal> get_param_num() const;
+    std::vector<literal> get_params() const;
     std::vector<equation> get_equations() const;
+
+    MQS_system create(std::string filepath);
+    // Функция выше предназначены для корректного создания объекта системы через имя файла с MQS encode
 
     MQS_system unit_propagation();
     // Эта функция возвращает объект системы сокращенный с использоавнием имеющихся данных.
