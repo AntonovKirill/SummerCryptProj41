@@ -1,23 +1,24 @@
 #ifndef SEARCH_TREE_HPP
 #define SEARCH_TREE_HPP
 
+#include <iostream>
+#include <vector>
 #include "equations_system.hpp"
 
 class SearchNode
 {
 public:
-    int num; // номер переменной 
-    int value;            
+    int num;
+    int val;
     SearchNode* left;
     SearchNode* right;
-    SearchNode* parent;
-    
-    // КОНСТРУКТОР (создает узел)
-    SearchNode(int n, int val, SearchNode* p = nullptr)
+    SearchNode* par;
+
+    SearchNode(int n, int v, SearchNode* p = nullptr)
     {
         num = n;
-        value = val;
-        parent = p;
+        val = v;
+        par = p;
         left = nullptr;
         right = nullptr;
     }
@@ -26,77 +27,123 @@ public:
 class SearchTree
 {
 private:
-    SearchNode* root;       
-    MQS_system* system;     
-    int varCount; //кол-во переменных
-    int stepCount; // сколько шагов сделали
-    
+    SearchNode* root;
+    int count;
+    std::vector<int> assign;
+    int steps;
+    MQS_system* system; 
+
 public:
-    // КОНСТРУКТОР
     SearchTree(MQS_system& sys)
     {
         system = &sys;
-        varCount = sys.getParamNum().size(); // получаем число переменных
+        count = system->get_params().size();
+        steps = 0;
         root = nullptr;
-        stepCount = 0;
+        assign.resize(count, -1);
     }
-    
+
     bool solve()
     {
         root = new SearchNode(-1, -1, nullptr);
         return backtrack(root);
     }
-    
-    // рекурсивный обход
+
     bool backtrack(SearchNode* node)
     {
-        stepCount++;
-        
-        // Проверяем, все ли переменные назначены
+        steps++;
+
         if (isComplete())
         {
-            return checkSolution(); 
+            return checkSolution();
         }
-        
-        int nextVar = selectVariable();
-        if (nextVar == -1)
-        {
-            return false;  
-        }
-        
-        // x = 0
-        SearchNode* child0 = new SearchNode(nextVar, 0, node);
+
+        int v = selectVariable();
+        if (v == -1) return false;
+
+        assign[v] = 0;
+        SearchNode* child0 = new SearchNode(v, 0, node);
         node->left = child0;
-        if (backtrack(child0))
-        {
-            return true; 
-        }
-        delete child0; 
-        // x = 1
-        SearchNode* child1 = new SearchNode(nextVar, 1, node);
+        if (backtrack(child0)) return true;
+
+        assign[v] = -1;
+        delete child0;
+        node->left = nullptr;
+
+        assign[v] = 1;
+        SearchNode* child1 = new SearchNode(v, 1, node);
         node->right = child1;
-        if (backtrack(child1))
-        {
-            return true;  
-        }
+        if (backtrack(child1)) return true;
+
+        assign[v] = -1;
         delete child1;
-        
+        node->right = nullptr;
+
         return false;
     }
-    
+
     bool isComplete()
     {
-      // здесь будет проверка
+        for (int i = 0; i < count; i++)
+        {
+            if (assign[i] == -1) return false;
+        }
         return true;
     }
-    
+
     bool checkSolution()
     {
-        // здесь будет проверка уравнений
+        for (const auto& eq : system->get_equations())
+        {
+            if (!checkEquation(eq))
+            {
+                return false;
+            }
+        }
         return true;
     }
-    
 
+    bool checkEquation(const equation& eq)
+    {
+        bool result = 0;
+        int xorSum = 0;
+
+        for (const auto& lit : eq.get_param_form())
+        {
+            int var = lit.get_id() / 2;
+            int val = assign[var];
+
+            if (val == -1) return false; 
+
+            if (lit.get_id() % 2 == 1)
+            {
+                val = 1 - val;
+            }
+
+            xorSum ^= val;
+        }
+
+        return xorSum == 0;
+    }
+
+    int selectVariable()
+    {
+        for (int i = 0; i < count; i++)
+        {
+            if (assign[i] == -1) return i;
+        }
+        return -1;
+    }
+
+    void printSolution()
+    {
+        std::cout << "Решение найдено!" << std::endl;
+        for (int i = 0; i < count; i++)
+        {
+            std::cout << "x" << i << " = " << assign[i] << std::endl;
+        }
+        std::cout << "Шагов: " << steps << std::endl;
+    }
 };
 
 #endif
