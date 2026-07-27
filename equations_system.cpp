@@ -102,9 +102,9 @@ MQS_system::MQS_system(std::vector<equation> equations0) : params(), equations(e
     {
         for (int j = 0; j < equations[i].param_form.size(); j++)
         {
-            if ( ( equations[i].param_form[j].id / 2 * 2 + 1 ) > params.size() )
+            if ((equations[i].param_form[j].id / 2 * 2 + 1) > params.size())
             {
-                params.resize( (equations[i].param_form[j].id / 2 * 2 + 2), literal(-1, 4) );
+                params.resize((equations[i].param_form[j].id / 2 * 2 + 2), literal(-1, 4));
             }
             params[equations[i].param_form[j].id] = equations[i].param_form[j];
         }
@@ -113,7 +113,7 @@ MQS_system::MQS_system(std::vector<equation> equations0) : params(), equations(e
     {
         if (params[i].id == -1)
         {
-            params[i] = literal( i, params[i + static_cast<int>(std::pow(-1, i%2))]^1 );
+            params[i] = literal(i, params[i + static_cast<int>(std::pow(-1, i % 2))] ^ 1);
         }
     }
 }
@@ -126,7 +126,7 @@ MQS_system::~MQS_system
 
 MQS_system MQS_system::create(std::string filepath)
 {
-    //В разработке
+    // В разработке
     return NULL;
 }
 
@@ -135,7 +135,7 @@ void MQS_system::destroy()
     delete this;
 }
 
-void set_params(std::vector<literal*> params0)
+void set_params(std::vector<literal *> params0)
 {
     params = params0;
 }
@@ -145,7 +145,7 @@ void set_equations(std::vector<equation> equations0)
     equations = equations0;
 }
 
-std::vector<literal*> get_params() const
+std::vector<literal *> get_params() const
 {
     return params;
 }
@@ -157,16 +157,16 @@ std::vector<equation> get_equations() const
 
 MQS_system MQS_system::unit_propagation()
 {
-    //В разработке
+    // В разработке
     retrun MQS_system();
 }
 
 void MQS_system::add_equation(equation eq)
 {
     equations.push_back(eq);
-    for (int i=0; i < eq.param_form.size(); i++)
+    for (int i = 0; i < eq.param_form.size(); i++)
     {
-        if(params[eq.param_form[i].id].is_known() == 0 and eq.param_form[i].is_known() == 1)
+        if (params[eq.param_form[i].id].is_known() == 0 and eq.param_form[i].is_known() == 1)
         {
             params[eq.param_form[i].id] = eq.param_form[i];
         }
@@ -175,7 +175,7 @@ void MQS_system::add_equation(equation eq)
 
 bool MQS_system::is_linear()
 {
-    for (int i=0; i < equations.size(); i++)
+    for (int i = 0; i < equations.size(); i++)
     {
         if (equations[i].is_linear() == 0)
         {
@@ -189,95 +189,144 @@ bool MQS_system::add_literal_value()
 {
     for (i = 0; i < params.size(); i = i + 2)
     {
-        if ( (params[i].is_known() == 1) and (params[i+1].is_known() == 1) and ((params[i+1].value ^ params[i].value) == 0) )
+        if ((params[i].is_known() == 1) and (params[i + 1].is_known() == 1) and ((params[i + 1].value ^ params[i].value) == 0))
         {
             return 1;
         }
-        if ( (params[i].is_known()) ^ (params[i+1].is_known()) )
+        if ((params[i].is_known()) ^ (params[i + 1].is_known()))
         {
             if (params[i].is_known() == 1)
             {
-                params[i+1].value = (params[i].value ^ 1);
+                params[i + 1].value = (params[i].value ^ 1);
             }
             else
             {
-                params[i].value = (params[i+1].value ^ 1);
+                params[i].value = (params[i + 1].value ^ 1);
             }
         }
     }
     return 0;
 }
 
+// вспомогательная структура для разреженного уравнения
+struct SparseEquation // то есть вместо [1, 0, 0, 1, 0] -> [0, 3]
+{
+    std::vector<int> indices; // индексы столбцов, где стоят 1 ([1, 0, 0, 1, 0] -> [0, 3])
+    uint8_t free_term{0};     // свободный член (0 или 1)
+    bool is_empty() const     // остались ли в уравнении переменные, если вектор пуст, то 0 = free_term (несовместное)
+    {
+        return indices.empty();
+    }
+    int leading_var() const // индекс самой первой переменной в уравнении
+    {
+        return indices.empty() ? -1 : indices.front();
+    }
+};
+
+// операция XOR для двух разреженных строк
+static void xor_sparse_rows(SparseEquation &target, const SparseEquation &source) // строку target обнуляем, source -- опорная стрка
+{
+    std::vector<int> result;
+    result.reserve(target.indices.size() + source.indices.size());
+    size_t i = 0, j = 0;
+    while (i < target.indices.size() && j < source.indices.size())
+    {
+        // если элемент только в target или только в source, сохраняем в result
+        if (target.indices[i] < source.indices[j])
+        {
+            result.push_back(target.indices[i++]);
+        }
+        else if (target.indices[i] > source.indices[j])
+        {
+            result.push_back(source.indices[j++]);
+        }
+        else // если переменная в обеих строках, она сокращается (сдвигаем указатели, не добавляя индекс в result)
+        {
+            // 1 XOR 1 = 0 (элементы сокращаются)
+            ++i;
+            ++j;
+        }
+    }
+    // дописываем оставгиеся элементы из длинного массива
+    while (i < target.indices.size())
+        result.push_back(target.indices[i++]);
+    while (j < source.indices.size())
+        result.push_back(source.indices[j++]);
+
+    target.indices = std::move(result);   // перезаписываем target
+    target.free_term ^= source.free_term; // xor свободных членов
+}
+
 bool MQS_system::solve_gauss()
 {
-    if (this->is_linear() != 0) // проверка линейности системы
+    std::vector<SparseEquation> sparse_rows; // массив для хранения разреженных уравнений
+    sparse_rows.reserve(equations.size());
+    for (const auto &eq : equations) // перебираем каждое исходное уравнение
     {
-        return 1;
-    }
-    size_t n_eqs = equations.size(); // кол-во уравнений в с-ме
-    if (n_eqs == 0)
-        return 0;
-
-    size_t n_vars = param_num.size(); // кол-во переменных в с-ме (размерность)
-    std::vector<std::vector<uint8_t>> matrix(n_eqs, std::vector<uint8_t>(n_vars + 1, 0));
-    // двумерный вектор размером n_eqs строк на n_vars + 1 столбцов (+1 для свободных членов)
-    for (size_t i = 0; i < n_eqs; ++i)
-    {
-        std::vector<literal *> lits = equations[i].get_param_form(); // берем список его литералов
-        for (size_t j = 0; j < lits.size(); ++j)
+        SparseEquation sp_eq;
+        sp_eq.free_term = 0;
+        const auto &literals = eq.get_param_form();
+        for (const auto &lit : literals)
         {
-            literal *lit = lits[j];
-            int var_index = lit->get_id() / 2; // вычисляем индекс переменной
-            if (var_index < n_vars)
+            int raw_id = lit.get_id(); // id литерала (нч == нот(xi) == xi xor 1 -- 1 уносим в free_term)
+            int var_id = raw_id / 2;   //  x_i имеет индекс i = raw_id / 2
+            sp_eq.indices.push_back(var_id);
+            if (raw_id % 2 != 0) // (нч == нот(xi) == xi xor 1 -- 1 уносим в free_term)
             {
-                matrix[i][var_index] ^= 1; // ставим 1 в соотв ячейку матрицы (xor чтобы учесть возможное сложение одинаковых переменных)
+                sp_eq.free_term ^= 1;
             }
         }
-        matrix[i][n_vars] = equations[i].get_free_term(); // свободный член заполняем
-    }
 
-    size_t pivot_row = 0; // индекс опорной строки (в какую строку мы записываем текущий главный элемент)
-    for (size_t col = 0; col < n_vars && pivot_row < n_eqs; ++col)
-    {
-        size_t sel = pivot_row;
-        while (sel < n_eqs && matrix[sel][col] == 0)
+        std::sort(sp_eq.indices.begin(), sp_eq.indices.end()); // сортировка для метода двух указателей
+        std::vector<int> unique_indices;
+        unique_indices.reserve(sp_eq.indices.size());
+        // убираем дубликаты (так как x_i XOR x_i = 0)
+        for (int idx : sp_eq.indices)
         {
-            ++sel;
-        }
-        if (sel == n_eqs)
-        {
-            continue;
-        }
-        std::swap(matrix[pivot_row], matrix[sel]); // перестановка строк
-        for (size_t r = 0; r < n_eqs; ++r)         // обнуление столбца
-        {
-            if (r != pivot_row && matrix[r][col] == 1)
+            if (!unique_indices.empty() && unique_indices.back() == idx)
             {
-                for (size_t c = col; c <= n_vars; ++c)
-                {
-                    matrix[r][c] ^= matrix[pivot_row][c];
-                }
+                unique_indices.pop_back(); // 1 xor 1 = 0 (переменная сократилась)
+            }
+            else
+            {
+                unique_indices.push_back(idx);
             }
         }
-        ++pivot_row;
-    }
-
-    for (size_t r = 0; r < n_eqs; ++r) // проверка на совместность системы (нет ли 00000 | 1)
-    {
-        bool all_zeros = true;
-        for (size_t c = 0; c < n_vars; ++c)
+        sp_eq.indices = std::move(unique_indices);
+        if (!sp_eq.is_empty() || sp_eq.free_term != 0) // не 0 == 0
         {
-            if (matrix[r][c] == 1)
+            sparse_rows.push_back(std::move(sp_eq));
+        }
+    }
+    // прямой ход алгоритма Гаусса
+    size_t total_vars = params.size();
+    std::vector<int> pivot_row(total_vars, -1);
+    // pivot_row[k] хранит индекс строки, к-ая явл опорной для переменной xk
+    for (size_t i = 0; i < sparse_rows.size(); ++i)
+    {
+        while (!sparse_rows[i].is_empty())
+        {
+            int lead = sparse_rows[i].leading_var();                 // ведущая переменная
+            if (lead < 0 || static_cast<size_t>(lead) >= total_vars) // проверка выхода за границы
             {
-                all_zeros = false;
+                break;
+            }
+            if (pivot_row[lead] != -1) // если уже есть опорная строка (xor текущей с этой, lead зануляется, while проверяет след переменную)
+            {
+                int p_idx = pivot_row[lead];
+                xor_sparse_rows(sparse_rows[i], sparse_rows[p_idx]);
+            }
+            else
+            {
+                pivot_row[lead] = static_cast<int>(i); // новая опорная строка
                 break;
             }
         }
-        if (all_zeros && matrix[r][n_vars] == 1)
+        // проверка на противоречие (совместность)
+        if (sparse_rows[i].is_empty() && sparse_rows[i].free_term != 0)
         {
-            return 1;
+            return true; // система несовместна (противоречие)
         }
     }
-
-    return 0;
+    return false; // система совместна
 }
