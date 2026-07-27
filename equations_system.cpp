@@ -17,7 +17,7 @@ std::uint8_t literal::get_value() const
 {
     return value;
 }
-
+/*
 literal* literal::create()
 {
     literal* ret = new literal;
@@ -35,6 +35,7 @@ literal* literal::create(int id0, std::uint8_t value0)
     literal* ret = new literal(id0, value0);
     return ret;
 }
+*/
 
 void literal::destroy()
 {
@@ -55,13 +56,13 @@ equation::equation(param_form0) : Is_line(0), param_form(param_form0) {}
 equation::equation(Is_line0, param_form0) : Is_line(Is_line0), param_form(param_form0) {}
 
 equation::~equation() {}
-
+/*
 equation* equation::create(Is_line0, param_form0)
 {
     equation* ret = new equation(Is_line0, param_form0);
     return ret;
 }
-
+*/
 void equation::destroy()
 {
     delete this;
@@ -72,7 +73,7 @@ void equation::set_Is_line(bool Is_line0)
     Is_line = Is_line0;
 }
 
-void equation::set_param_form(std::vector<literal*> param_form0)
+void equation::set_param_form(std::vector<literal> param_form0)
 {
     param_form = param_form0;
 }
@@ -82,7 +83,7 @@ bool equation::get_Is_line() const
     return Is_line;
 }
 
-std::vector<literal*> equation::get_param_form() const
+std::vector<literal> equation::get_param_form() const
 {
     return param_form;
 }
@@ -92,7 +93,120 @@ bool equation::is_linear()
     return (Is_line == 1);
 }
 
+MQS_system::MQS_system() : params(), equations() {}
 
+MQS_system::MQS_system(std::vector<equation> equations0) : params(), equations(equations0)
+{
+
+    for (int i = 0; i < equations.size(); i++)
+    {
+        for (int j = 0; j < equations[i].param_form.size(); j++)
+        {
+            if ( ( equations[i].param_form[j].id / 2 * 2 + 1 ) > params.size() )
+            {
+                params.resize( (equations[i].param_form[j].id / 2 * 2 + 2), literal(-1, 4) );
+            }
+            params[equations[i].param_form[j].id] = equations[i].param_form[j];
+        }
+    }
+    for (int i = 0; i < params.size(); i++)
+    {
+        if (params[i].id == -1)
+        {
+            params[i] = literal( i, params[i + static_cast<int>(std::pow(-1, i%2))]^1 );
+        }
+    }
+}
+
+MQS_system::~MQS_system
+{
+    params.clear();
+    equations.clear();
+}
+
+MQS_system MQS_system::create(std::string filepath)
+{
+    //В разработке
+    return NULL;
+}
+
+void MQS_system::destroy()
+{
+    delete this;
+}
+
+void set_params(std::vector<literal*> params0)
+{
+    params = params0;
+}
+
+void set_equations(std::vector<equation> equations0)
+{
+    equations = equations0;
+}
+
+std::vector<literal*> get_params() const
+{
+    return params;
+}
+
+std::vector<equation> get_equations() const
+{
+    return equations;
+}
+
+MQS_system MQS_system::unit_propagation()
+{
+    //В разработке
+    retrun MQS_system();
+}
+
+void MQS_system::add_equation(equation eq)
+{
+    equations.push_back(eq);
+    for (int i=0; i < eq.param_form.size(); i++)
+    {
+        if(params[eq.param_form[i].id].is_known() == 0 and eq.param_form[i].is_known() == 1)
+        {
+            params[eq.param_form[i].id] = eq.param_form[i];
+        }
+    }
+}
+
+bool MQS_system::is_linear()
+{
+    for (int i=0; i < equations.size(); i++)
+    {
+        if (equations[i].is_linear() == 0)
+        {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+bool MQS_system::add_literal_value()
+{
+    for (i = 0; i < params.size(); i = i + 2)
+    {
+        if ( (params[i].is_known() == 1) and (params[i+1].is_known() == 1) and ((params[i+1].value ^ params[i].value) == 0) )
+        {
+            return 1;
+        }
+        if ( (params[i].is_known()) ^ (params[i+1].is_known()) )
+        {
+            if (params[i].is_known() == 1)
+            {
+                params[i+1].value = (params[i].value ^ 1);
+            }
+            else
+            {
+                params[i].value = (params[i+1].value ^ 1);
+            }
+        }
+    }
+    return 0;
+}
 
 bool MQS_system::solve_gauss()
 {
