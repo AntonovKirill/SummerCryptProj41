@@ -44,7 +44,7 @@ class equation
 {
 private:
     bool Is_line;                      // В рамках данной работы уравнения могут быть только линейными или квадратичные.
-    std::vector<literal> param_form;   // Задает порядок литералов в уравнении.
+    std::vector<int> ids;   // Задает порядок литералов в уравнении.
     /*
     Переменные выше в рамках данной работы одназначно определяют любое возможное уравнение.
 
@@ -77,8 +77,8 @@ public:
 
     equation();
     equation(Is_line0);
-    equation(param_form0);
-    equation(Is_line0, param_form0);
+    equation(ids0);
+    equation(Is_line0, ids0);
 /*
     equation* create(Is_line0, param_form0);
     // Функция выше предназначена для корректного создания создания объекта уравнения.
@@ -87,10 +87,10 @@ public:
     // Функция предназначена для корректного удаления объекта уравнения.
 
     void set_Is_line(bool Is_line0);
-    void set_param_form(std::vector<literal> param_form0);
+    void set_ids(std::vector<int> ids0);
 
     bool get_Is_line() const;
-    std::vector<literal> get_param_form() const;
+    std::vector<int> get_ids() const;
 
     bool is_linear();
     // Эта функция предназначена для решения системы (и уравнений в частности), реализации логики графа.
