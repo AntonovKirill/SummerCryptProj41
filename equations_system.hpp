@@ -15,7 +15,6 @@ private:
     int id;             // Идентификационный номер литерала равный 2i для x_i и 2i+1 для NOT(x_i).
     std::uint8_t value; // Найденное в ходе решения значение.
 
-    ~literal();
 
 public:
     literal();
@@ -27,12 +26,14 @@ public:
             literal* create(int id0, std::uint8_t value0);
             //Функции выше предназначены для корректного создания создания объекта литерала.
     */
+    ~literal();
     void destroy();
     // Функция предназначена для корректного удаления объекта литерала.
 
     void set_value(std::uint8_t value0);
 
     std::uint8_t get_value() const;
+    int get_id();
 
     bool is_known();
     // Функция предназаначена для проверки заданныли значения литерала.
@@ -71,8 +72,6 @@ private:
         x1 AND x2 XOR x3 = 0
     */
 
-    ~equation();
-
 public:
     equation();
     equation(bool Is_line0);
@@ -82,6 +81,8 @@ public:
         equation* create(Is_line0, param_form0);
         // Функция выше предназначена для корректного создания создания объекта уравнения.
     */
+   
+    ~equation();
     void destroy();
     // Функция предназначена для корректного удаления объекта уравнения.
 
@@ -100,10 +101,9 @@ public:
 class MQS_system
 {
 private:
+    // TODO: разобраться, почему в комментарии сказано про указатели, а на деле просто объект
     std::vector<literal> params;     // Массив указателей литералы используемые системы (и сопряженые им)
     std::vector<equation> equations; // Массив уравнений системы
-
-    ~MQS_system();
 
 public:
     MQS_system();
@@ -112,6 +112,8 @@ public:
         MQS_system* create(std::string filepath);
         // Функция выше предназначены для корректного создания объекта системы.
     */
+
+    ~MQS_system();
     void destroy();
     // Эта функция предназначена для корректного удаления объекта системы.
 
