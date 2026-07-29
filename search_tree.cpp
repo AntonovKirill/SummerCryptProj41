@@ -9,6 +9,7 @@ SearchNode::SearchNode(int n, int v, SearchNode* p)
     right = nullptr;
 }
 
+// такой конструктор не объявлен
 SearchTree::SearchTree(int vars)
 {
     count = vars;

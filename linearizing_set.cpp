@@ -41,8 +41,9 @@ void linearizing_set::process_tasks(MQS_system &mqs) // перебор 2^m по�
                 val_char = '0';
             }
             literals_set[i].set_value(val_char);
-            current_mqs.substitute(literals_set[i]);
+            current_mqs.unit_propagation(literals_set[i]);
         }
+        // TODO: зачем эта строчка, что она значит?
         current_mqs = current_mqs.unit_propagation();
         if (current_mqs.is_linear() == 0)
         {
