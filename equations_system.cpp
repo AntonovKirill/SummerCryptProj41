@@ -2,9 +2,9 @@
 
 literal::literal() : id(0), value(2) {}
 
-literal::literal(int id) : id(id0), value(2) {}
+literal::literal(int id0) : id(id0), value(2) {}
 
-literal::literal(int id, std::uint8_t value0) : id(id0), value(value0) {}
+literal::literal(int id0, std::uint8_t value0) : id(id0), value(value0) {}
 
 literal::~literal() {}
 
@@ -47,9 +47,9 @@ bool literal::is_known()
     return (value <= 1);
 }
 
-equation::equation() : Is_line(0), param_form() {}
+equation::equation() : Is_line(false), param_form() {}
 
-equation::equation(Is_line0) : Is_line(Is_line0), param_form() {}
+equation::equation(bool Is_line0) : Is_line(Is_line0), param_form() {}
 
 equation::equation(param_form0) : Is_line(0), param_form(param_form0) {}
 
@@ -155,10 +155,165 @@ std::vector<equation> get_equations() const
     return equations;
 }
 
-MQS_system MQS_system::unit_propagation()
+bool MQS_system::unit_propagation(literal &x)
 {
-    // В разработке
-    retrun MQS_system();
+    if (add_literal_value(x))
+    {
+        return true; // противоречие
+    }
+    bool changed = false;
+    // цикл до тех пор, пока выводятся новые значения литералов (каскадное распространение)
+    do
+    {
+        changed = false;
+        std::vector<equation> new_equations;
+        new_equations.reserve(equations.size());
+        for (auto &eq : equations)
+        {
+            auto ids = eq.get_ids();
+            // ЛИНЕЙНОЕ УРАВНЕНИЕ (XOR)
+            if (eq.get_Is_line())
+            {
+                std::vector<int> remaining_ids;
+                uint8_t accumulated_const = 0;
+                for (int raw_id : ids)
+                {
+                    int var_id = raw_id / 2;
+                    uint8_t val = params[var_id].get_value(); // значение переменной
+                    if (params[var_id].is_known())
+                    {
+                        uint8_t lit_val = (raw_id % 2 == 0) ? val : (val ^ 1);
+                        accumulated_const ^= lit_val;
+                        changed = true; // подставили значение — уравнение меняется
+                    }
+                    else
+                    {
+                        remaining_ids.push_back(raw_id); // переменная неизвестна, оставляем литерал
+                    }
+                }
+                // если не осталось переменных в уравнении
+                if (remaining_ids.empty())
+                {
+                    if (accumulated_const != 0)
+                    {
+                        return true; // противоречие: 0 = 1
+                    }
+                    continue; // 0 = 0, уравнение выполнено и удаляется
+                }
+                // учитываем накопившуюся константу 1 (над F_2 это инверсия одного из литералов)
+                if (accumulated_const != 0)
+                {
+                    remaining_ids[0] ^= 1;
+                }
+                eq.set_ids(remaining_ids);
+                new_equations.push_back(eq);
+            }
+            // КВАДРАТИЧНОЕ УРАВНЕНИЕ (x = y AND z)
+            // ids[0] = y, ids[1] = z, ids[2] = x
+            else if (ids.size() == 3)
+            {
+                int y_raw = ids[0], z_raw = ids[1], x_raw = ids[2];
+                uint8_t y_known = params[y_raw / 2].is_known();
+                uint8_t y_val = y_known ? (params[y_raw / 2].get_value() ^ (y_raw % 2)) : 2;
+                uint8_t z_known = params[z_raw / 2].is_known();
+                uint8_t z_val = z_known ? (params[z_raw / 2].get_value() ^ (z_raw % 2)) : 2;
+                uint8_t x_known = params[x_raw / 2].is_known();
+                uint8_t x_val = x_known ? (params[x_raw / 2].get_value() ^ (x_raw % 2)) : 2;
+                // --- ПРОВЕРКА ПРОТИВОРЕЧИЙ ---
+                if (x_known && y_known && z_known)
+                {
+                    if (x_val != (y_val & z_val))
+                    {
+                        return true; // противоречие
+                    }
+                    changed = true;
+                    continue; // уравнение выполнено, удаляем
+                }
+                // x = 1, но y == 0 или z == 0
+                if (x_known && x_val == 1)
+                {
+                    if ((y_known && y_val == 0) || (z_known && z_val == 0))
+                    {
+                        return true; // противоречие (1 == 0 & ...)
+                    }
+                }
+                // y == 0 или z == 0, но x уже == 1
+                if ((y_known && y_val == 0) || (z_known && z_val == 0))
+                {
+                    if (x_known && x_val == 1)
+                    {
+                        return true; // противоречие
+                    }
+                }
+                // --- ПРАВИЛА ВЫВОДА ---
+                // rule 2: y = 1 => equation превращается в x = z (линейное: x XOR z = 0)
+                if (y_known && y_val == 1)
+                {
+                    equation lin_eq;
+                    lin_eq.set_Is_line(true);
+                    lin_eq.set_ids({x_raw, z_raw});
+                    new_equations.push_back(lin_eq);
+                    changed = true;
+                    continue;
+                }
+                // rule 3: z = 1 => equation превращается в x = y (линейное: x XOR y = 0)
+                if (z_known && z_val == 1)
+                {
+                    equation lin_eq;
+                    lin_eq.set_Is_line(true);
+                    lin_eq.set_ids({x_raw, y_raw});
+                    new_equations.push_back(lin_eq);
+                    changed = true;
+                    continue;
+                }
+                // rule 4: x = 1 => y = 1 и z = 1
+                if (x_known && x_val == 1)
+                {
+                    literal y_lit(y_raw / 2, (y_raw % 2 == 0) ? 1 : 0);
+                    literal z_lit(z_raw / 2, (z_raw % 2 == 0) ? 1 : 0);
+                    if (add_literal_value(y_lit) || add_literal_value(z_lit))
+                        return true;
+                    changed = true;
+                    continue;
+                }
+                // rule 5: y = 0 или z = 0 => x = 0
+                if ((y_known && y_val == 0) || (z_known && z_val == 0))
+                {
+                    literal x_lit(x_raw / 2, (x_raw % 2 == 0) ? 0 : 1);
+                    if (add_literal_value(x_lit))
+                        return true;
+                    changed = true;
+                    continue;
+                }
+                // rule 6: x = 0 и y = 1 => z = 0
+                if (x_known && x_val == 0 && y_known && y_val == 1)
+                {
+                    literal z_lit(z_raw / 2, (z_raw % 2 == 0) ? 0 : 1);
+                    if (add_literal_value(z_lit))
+                        return true;
+                    changed = true;
+                    continue;
+                }
+                // rule 7: x = 0 и z = 1 => y = 0
+                if (x_known && x_val == 0 && z_known && z_val == 1)
+                {
+                    literal y_lit(y_raw / 2, (y_raw % 2 == 0) ? 0 : 1);
+                    if (add_literal_value(y_lit))
+                        return true;
+                    changed = true;
+                    continue;
+                }
+                // Если ни одно правило не сработало, оставляем квадратичное уравнение
+                new_equations.push_back(eq);
+            }
+            else
+            {
+                new_equations.push_back(eq);
+            }
+        }
+        equations = std::move(new_equations);
+    } while (changed);
+    return false;
 }
 
 void MQS_system::add_equation(equation eq)
@@ -187,7 +342,7 @@ bool MQS_system::is_linear()
 
 bool MQS_system::add_literal_value()
 {
-    for (i = 0; i < params.size(); i = i + 2)
+    for (int i = 0; i < params.size(); i = i + 2)
     {
         if ((params[i].is_known() == 1) and (params[i + 1].is_known() == 1) and ((params[i + 1].value ^ params[i].value) == 0))
         {
@@ -303,7 +458,14 @@ bool MQS_system::solve_gauss()
         }
     }
     // прямой ход алгоритма Гаусса
-    size_t total_vars = params.size();
+    size_t total_vars = 0;
+    for (const auto &row : sparse_rows)
+    {
+        if (!row.indices.empty())
+        {
+            total_vars = std::max(total_vars, static_cast<size_t>(row.indices.back() + 1));
+        }
+    }
     std::vector<int> pivot_row(total_vars, -1);
     // pivot_row[k] хранит индекс строки, к-ая явл опорной для переменной xk
     for (size_t i = 0; i < sparse_rows.size(); ++i)

@@ -9,42 +9,42 @@
 #include <algorithm> //std::swap
 #include <cmath>     //std::pow
 
-class literal {
-    private:
-        int id;             //Идентификационный номер литерала равный 2i для x_i и 2i+1 для NOT(x_i).
-        std::uint8_t value; //Найденное в ходе решения значение.
+class literal
+{
+private:
+    int id;             // Идентификационный номер литерала равный 2i для x_i и 2i+1 для NOT(x_i).
+    std::uint8_t value; // Найденное в ходе решения значение.
 
-        ~literal();
+    ~literal();
 
-    public:
+public:
+    literal();
+    literal(int id0);
+    literal(int id0, std::uint8_t value0);
+    /*
+            literal* create();
+            literal* create(int id0);
+            literal* create(int id0, std::uint8_t value0);
+            //Функции выше предназначены для корректного создания создания объекта литерала.
+    */
+    void destroy();
+    // Функция предназначена для корректного удаления объекта литерала.
 
-        literal();
-        literal(int id0);
-        literal(int id0, std::uint8_t value0);
-/*
-        literal* create();
-        literal* create(int id0);
-        literal* create(int id0, std::uint8_t value0);
-        //Функции выше предназначены для корректного создания создания объекта литерала.
-*/
-        void destroy();
-        //Функция предназначена для корректного удаления объекта литерала.
+    void set_value(std::uint8_t value0);
 
-        void set_value(std::uint8_t value0);
+    std::uint8_t get_value() const;
 
-        std::uint8_t get_value() const;
-
-        bool is_known();
-        //Функция предназаначена для проверки заданныли значения литерала.
-        //Возвращает 1 если значеничение литерала уже было инициализровано ранее.
-        //Возвращает 0 в противном случае.
+    bool is_known();
+    // Функция предназаначена для проверки заданныли значения литерала.
+    // Возвращает 1 если значеничение литерала уже было инициализровано ранее.
+    // Возвращает 0 в противном случае.
 };
 
 class equation
 {
 private:
-    bool Is_line;                      // В рамках данной работы уравнения могут быть только линейными или квадратичные.
-    std::vector<int> ids;   // Задает порядок литералов в уравнении.
+    bool Is_line;         // В рамках данной работы уравнения могут быть только линейными или квадратичные.
+    std::vector<int> ids; // Задает порядок литералов в уравнении.
     /*
     Переменные выше в рамках данной работы одназначно определяют любое возможное уравнение.
 
@@ -74,15 +74,14 @@ private:
     ~equation();
 
 public:
-
     equation();
-    equation(Is_line0);
-    equation(ids0);
-    equation(Is_line0, ids0);
-/*
-    equation* create(Is_line0, param_form0);
-    // Функция выше предназначена для корректного создания создания объекта уравнения.
-*/
+    equation(bool Is_line0);
+    equation(const std::vector<int> &ids0);
+    equation(bool Is_line0, const std::vector<int> &ids0);
+    /*
+        equation* create(Is_line0, param_form0);
+        // Функция выше предназначена для корректного создания создания объекта уравнения.
+    */
     void destroy();
     // Функция предназначена для корректного удаления объекта уравнения.
 
@@ -101,19 +100,18 @@ public:
 class MQS_system
 {
 private:
-    std::vector<literal> params;      // Массив указателей литералы используемые системы (и сопряженые им)
-    std::vector<equation> equations;  // Массив уравнений системы
+    std::vector<literal> params;     // Массив указателей литералы используемые системы (и сопряженые им)
+    std::vector<equation> equations; // Массив уравнений системы
 
     ~MQS_system();
 
 public:
-
     MQS_system();
     MQS_system(std::vector<equation> equations0);
-/*
-    MQS_system* create(std::string filepath);
-    // Функция выше предназначены для корректного создания объекта системы.
-*/
+    /*
+        MQS_system* create(std::string filepath);
+        // Функция выше предназначены для корректного создания объекта системы.
+    */
     void destroy();
     // Эта функция предназначена для корректного удаления объекта системы.
 
@@ -123,8 +121,7 @@ public:
     std::vector<literal> get_params() const;
     std::vector<equation> get_equations() const;
 
-    MQS_system unit_propagation();
-    // Эта функция возвращает объект системы сокращенный с использоавнием имеющихся данных.
+    bool unit_propagation(literal &x); // Эта функция возвращает объект системы сокращенный с использоавнием имеющихся данных.
 
     void add_equation(equation eq);
     // Эта функция предназначена для добавления нового уравнения в объект системы.
