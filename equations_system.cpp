@@ -259,7 +259,6 @@ static void xor_sparse_rows(SparseEquation &target, const SparseEquation &source
         result.push_back(target.indices[i++]);
     while (j < source.indices.size())
         result.push_back(source.indices[j++]);
-
     target.indices = std::move(result);   // перезаписываем target
     target.free_term ^= source.free_term; // xor свободных членов
 }
@@ -282,7 +281,6 @@ bool MQS_system::solve_gauss()
                 sp_eq.free_term ^= 1;
             }
         }
-
         std::sort(sp_eq.indices.begin(), sp_eq.indices.end()); // сортировка для метода двух указателей
         std::vector<int> unique_indices;
         unique_indices.reserve(sp_eq.indices.size());
@@ -335,4 +333,10 @@ bool MQS_system::solve_gauss()
         }
     }
     return false; // система совместна
+}
+
+MQS_system MQS_system::create(std::string filepath)
+{
+    // В разработке
+    return NULL;
 }
