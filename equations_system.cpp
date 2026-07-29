@@ -1,4 +1,11 @@
+#include <vector>
+#include <set>
+#include <string>
+#include <fstream>
+#include <sstream>
+
 #include "equations_system.hpp"
+
 
 literal::literal() : id(0), value(2) {}
 
@@ -16,6 +23,11 @@ void literal::set_value(std::uint8_t value0)
 std::uint8_t literal::get_value() const
 {
     return value;
+}
+
+int literal::get_id()
+{
+    return this->id;
 }
 /*
 literal* literal::create()
@@ -47,13 +59,14 @@ bool literal::is_known()
     return (value <= 1);
 }
 
-equation::equation() : Is_line(false), param_form() {}
+equation::equation() : Is_line(false), ids() {}
 
-equation::equation(bool Is_line0) : Is_line(Is_line0), param_form() {}
+equation::equation(bool Is_line0) : Is_line(Is_line0), ids() {}
 
-equation::equation(param_form0) : Is_line(0), param_form(param_form0) {}
+equation::equation(const std::vector<int> &ids) : Is_line(0), ids(ids) {}
 
-equation::equation(Is_line0, param_form0) : Is_line(Is_line0), param_form(param_form0) {}
+equation::equation(bool Is_line0, const std::vector<int> &ids) : 
+    Is_line(Is_line0), ids(ids) {}
 
 equation::~equation() {}
 /*
@@ -73,19 +86,19 @@ void equation::set_Is_line(bool Is_line0)
     Is_line = Is_line0;
 }
 
-void equation::set_param_form(std::vector<literal> param_form0)
-{
-    param_form = param_form0;
-}
+// void equation::set_param_form(std::vector<literal> param_form0)
+// {
+//     param_form = param_form0;
+// }
 
 bool equation::get_Is_line() const
 {
     return Is_line;
 }
 
-std::vector<literal> equation::get_param_form() const
+std::vector<int> equation::get_ids() const
 {
-    return param_form;
+    return this->ids;
 }
 
 bool equation::is_linear()
@@ -97,37 +110,35 @@ MQS_system::MQS_system() : params(), equations() {}
 
 MQS_system::MQS_system(std::vector<equation> equations0) : params(), equations(equations0)
 {
-
     for (int i = 0; i < equations.size(); i++)
     {
-        for (int j = 0; j < equations[i].param_form.size(); j++)
+        for (int j = 0; j < equations[i].get_ids().size(); j++)
         {
-            if ((equations[i].param_form[j].id / 2 * 2 + 1) > params.size())
+            if ((equations[i].get_ids()[j] / 2 * 2 + 1) > params.size())
             {
-                params.resize((equations[i].param_form[j].id / 2 * 2 + 2), literal(-1, 4));
+                // params.resize((equations[i].get_ids()[j] / 2 * 2 + 2), literal(-1, 4));
+                params.resize((equations[i].get_ids()[j] / 2 * 2 + 2));
             }
-            params[equations[i].param_form[j].id] = equations[i].param_form[j];
+            params[equations[i].get_ids()[j]] = literal(equations[i].get_ids()[j]);
         }
     }
+
     for (int i = 0; i < params.size(); i++)
     {
-        if (params[i].id == -1)
+        if (params[i].get_id() == -1)
         {
-            params[i] = literal(i, params[i + static_cast<int>(std::pow(-1, i % 2))] ^ 1);
+            // TODO: разобраться, что делает эта строчка
+            // literal lit(i, params[i + static_cast<int>(std::pow(-1, i % 2))] ^ 1);
+            literal lit(i, params[i ^ 1].get_value() ^ 1);
+            params[i] = lit;
         }
     }
 }
 
-MQS_system::~MQS_system
+MQS_system::~MQS_system()
 {
     params.clear();
     equations.clear();
-}
-
-MQS_system MQS_system::create(std::string filepath)
-{
-    // В разработке
-    return NULL;
 }
 
 void MQS_system::destroy()
@@ -135,22 +146,22 @@ void MQS_system::destroy()
     delete this;
 }
 
-void set_params(std::vector<literal *> params0)
+void MQS_system::set_params(std::vector<literal> params0)
 {
     params = params0;
 }
 
-void set_equations(std::vector<equation> equations0)
+void MQS_system::set_equations(std::vector<equation> equations0)
 {
     equations = equations0;
 }
 
-std::vector<literal *> get_params() const
+std::vector<literal> MQS_system::get_params() const
 {
     return params;
 }
 
-std::vector<equation> get_equations() const
+std::vector<equation> MQS_system::get_equations() const
 {
     return equations;
 }
@@ -319,12 +330,13 @@ bool MQS_system::unit_propagation(literal &x)
 void MQS_system::add_equation(equation eq)
 {
     equations.push_back(eq);
-    for (int i = 0; i < eq.param_form.size(); i++)
+    for (int i = 0; i < eq.get_ids().size(); i++)
     {
-        if (params[eq.param_form[i].id].is_known() == 0 and eq.param_form[i].is_known() == 1)
-        {
-            params[eq.param_form[i].id] = eq.param_form[i];
-        }
+        // TODO: поправить в соответствии с полями классов equation и literal
+        // if (params[eq.get_ids()[i]].is_known() == 0 and eq.param_form[i].is_known() == 1)
+        // {
+        //     params[eq.get_ids()[i]] = eq.param_form[i];
+        // }
     }
 }
 
@@ -340,26 +352,27 @@ bool MQS_system::is_linear()
     return 1;
 }
 
-bool MQS_system::add_literal_value()
+bool MQS_system::add_literal_value(literal new_lit)
 {
-    for (int i = 0; i < params.size(); i = i + 2)
-    {
-        if ((params[i].is_known() == 1) and (params[i + 1].is_known() == 1) and ((params[i + 1].value ^ params[i].value) == 0))
-        {
-            return 1;
-        }
-        if ((params[i].is_known()) ^ (params[i + 1].is_known()))
-        {
-            if (params[i].is_known() == 1)
-            {
-                params[i + 1].value = (params[i].value ^ 1);
-            }
-            else
-            {
-                params[i].value = (params[i + 1].value ^ 1);
-            }
-        }
-    }
+    // TODO: реализовать нормально
+    // for (int i = 0; i < params.size(); i = i + 2)
+    // {
+    //     if ((params[i].is_known() == 1) and (params[i + 1].is_known() == 1) and ((params[i + 1].value ^ params[i].value) == 0))
+    //     {
+    //         return 1;
+    //     }
+    //     if ((params[i].is_known()) ^ (params[i + 1].is_known()))
+    //     {
+    //         if (params[i].is_known() == 1)
+    //         {
+    //             params[i + 1].value = (params[i].value ^ 1);
+    //         }
+    //         else
+    //         {
+    //             params[i].value = (params[i + 1].value ^ 1);
+    //         }
+    //     }
+    // }
     return 0;
 }
 
@@ -497,8 +510,104 @@ bool MQS_system::solve_gauss()
     return false; // система совместна
 }
 
-MQS_system MQS_system::create(std::string filepath)
+MQS_system create(std::string filepath)
 {
-    // В разработке
-    return NULL;
+    // создаём поток ввода
+    std::ifstream is(filepath);
+
+    // множество всех переменных
+    std::set<int> all_vars_set;
+
+    // читаем заголовок
+    std::string header;
+	is >> header;
+
+    int vars_cnt, input_vars_cnt, latches_cnt, output_vars_cnt, and_equations_cnt;
+
+	if (header == "aag")
+	{
+		is >> vars_cnt >> input_vars_cnt >> latches_cnt >> output_vars_cnt >> and_equations_cnt;
+	}
+	else
+	{
+		throw std::logic_error((std::string) "wrong format: \'aag\' expected but \'" + header + "\' found");
+	}
+
+    // читаем номера входных переменных (литералов)
+    std::vector<int> input_vars;
+	input_vars.resize(input_vars_cnt);
+
+	for (int i = 0; i < (int) input_vars_cnt; ++i)
+	{
+		is >> input_vars[i];
+		all_vars_set.insert(input_vars[i] & -2);
+	}
+
+    // читаем номера выходных переменных
+    std::vector<int> output_vars;
+    output_vars.resize(output_vars_cnt);
+
+	for (int i = 0; i < output_vars_cnt; ++i)
+		is >> output_vars[i];
+
+    // читаем список квадратичных уравнений
+    std::vector<equation> all_equations;
+    all_equations.resize(and_equations_cnt);
+    
+	for (int i = 0; i < and_equations_cnt; ++i)
+	{
+		int x, y, z;
+		is >> x >> y >> z;
+        equation eq(0, {std::min(y, z), std::max(y, z), x});
+		all_equations[i] = eq;
+		all_vars_set.insert(x & -2);
+	}
+
+	is >> header;
+	
+	if (header != "lin")
+	{
+		throw std::logic_error((std::string) "wrong format: \'lin\' expected but \'" + header + "\' found");
+	}
+
+	int linear_cnt;
+	is >> linear_cnt;
+
+	int line_cnt = 0;
+	std::string line;
+	std::stringstream ss;
+	
+	while (line_cnt < linear_cnt && getline(is, line))
+	{
+		ss.clear();
+		ss << line;
+
+		int x, rem = 0;
+		std::vector<int> lits;
+		
+		while (ss >> x)
+		{
+			lits.push_back(x & -2);
+			rem ^= x & 1;
+			all_vars_set.insert(x & -2);
+		}
+
+		if (lits.empty())
+			continue;
+		
+		sort(lits.begin(), lits.end());
+		lits[0] ^= rem;
+
+        equation eq(1, lits);
+		all_equations.push_back(eq);
+		++line_cnt;
+	}
+
+	if (linear_cnt != line_cnt)
+		std::cerr << "warning: " << "wrong linear constraints number: " 
+                  << linear_cnt << " expected but " << line_cnt << " found" << std::endl;
+    
+    MQS_system mqs(all_equations);
+    
+    return mqs;
 }
