@@ -1,6 +1,6 @@
 #include "equations_system.hpp"
 
-literal::literal() : id(-1), value(2) {}
+literal::literal() : id(0), value(2) {}
 
 literal::literal(int id) : id(id0), value(2) {}
 
@@ -17,7 +17,6 @@ std::uint8_t literal::get_value() const
 {
     return value;
 }
-
 /*
 literal* literal::create()
 {
@@ -48,13 +47,13 @@ bool literal::is_known()
     return (value <= 1);
 }
 
-equation::equation() : Is_line(0), ids() {}
+equation::equation() : Is_line(0), param_form() {}
 
-equation::equation(Is_line0) : Is_line(Is_line0), ids() {}
+equation::equation(Is_line0) : Is_line(Is_line0), param_form() {}
 
-equation::equation(ids0) : Is_line(0), ids(ids0) {}
+equation::equation(param_form0) : Is_line(0), param_form(param_form0) {}
 
-equation::equation(Is_line0, ids0) : Is_line(Is_line0), ids(ids0) {}
+equation::equation(Is_line0, param_form0) : Is_line(Is_line0), param_form(param_form0) {}
 
 equation::~equation() {}
 /*
@@ -74,9 +73,9 @@ void equation::set_Is_line(bool Is_line0)
     Is_line = Is_line0;
 }
 
-void equation::set_ids(std::vector<int> ids0)
+void equation::set_param_form(std::vector<literal> param_form0)
 {
-    ids = ids0;
+    param_form = param_form0;
 }
 
 bool equation::get_Is_line() const
@@ -84,9 +83,9 @@ bool equation::get_Is_line() const
     return Is_line;
 }
 
-std::vector<int> equation::get_ids() const
+std::vector<literal> equation::get_param_form() const
 {
-    return ids;
+    return param_form;
 }
 
 bool equation::is_linear()
@@ -98,14 +97,23 @@ MQS_system::MQS_system() : params(), equations() {}
 
 MQS_system::MQS_system(std::vector<equation> equations0) : params(), equations(equations0)
 {
+
     for (int i = 0; i < equations.size(); i++)
     {
-        for (int j = 0; j < equations[i].ids.size(); j++)
+        for (int j = 0; j < equations[i].param_form.size(); j++)
         {
-            if ( (equations[i].ids[j] / 2 * 2 + 1) > params.size() )
+            if ((equations[i].param_form[j].id / 2 * 2 + 1) > params.size())
             {
-                params.resize( (equations[i].ids[j] / 2 * 2 + 2), literal() );
+                params.resize((equations[i].param_form[j].id / 2 * 2 + 2), literal(-1, 4));
             }
+            params[equations[i].param_form[j].id] = equations[i].param_form[j];
+        }
+    }
+    for (int i = 0; i < params.size(); i++)
+    {
+        if (params[i].id == -1)
+        {
+            params[i] = literal(i, params[i + static_cast<int>(std::pow(-1, i % 2))] ^ 1);
         }
     }
 }
@@ -116,12 +124,18 @@ MQS_system::~MQS_system
     equations.clear();
 }
 
+MQS_system MQS_system::create(std::string filepath)
+{
+    // В разработке
+    return NULL;
+}
+
 void MQS_system::destroy()
 {
     delete this;
 }
 
-void set_params(std::vector<literal> params0)
+void set_params(std::vector<literal *> params0)
 {
     params = params0;
 }
@@ -131,7 +145,7 @@ void set_equations(std::vector<equation> equations0)
     equations = equations0;
 }
 
-std::vector<literal*> get_params() const
+std::vector<literal *> get_params() const
 {
     return params;
 }
@@ -143,42 +157,25 @@ std::vector<equation> get_equations() const
 
 MQS_system MQS_system::unit_propagation()
 {
-    std::vector<equation> equations0;
-    int c = 0;
-    for (int i=0; i<equations.size(); i++)
-    {
-        c = 0;
-        for (int j = 0; j < equations[i].ids.size(); j++)
-        {
-            if(params[equations[i].ids[j]].is_known == 0)
-            {
-                c++;
-            }
-        }
-        if (c>=2)
-        {
-            equations0.push_back();
-        }
-    }
-    MQS_system ret(equations0);
-    retrun ret;
+    // В разработке
+    retrun MQS_system();
 }
 
 void MQS_system::add_equation(equation eq)
 {
     equations.push_back(eq);
-    for (int i=0; i < eq.ids.size(); i++)
+    for (int i = 0; i < eq.param_form.size(); i++)
     {
-        if (eq.ids[i] >= params.size())
+        if (params[eq.param_form[i].id].is_known() == 0 and eq.param_form[i].is_known() == 1)
         {
-            params.resize(eq.ids[i] / 2 * 2 + 2);
+            params[eq.param_form[i].id] = eq.param_form[i];
         }
     }
 }
 
 bool MQS_system::is_linear()
 {
-    for (int i=0; i < equations.size(); i++)
+    for (int i = 0; i < equations.size(); i++)
     {
         if (equations[i].is_linear() == 0)
         {
@@ -188,46 +185,26 @@ bool MQS_system::is_linear()
     return 1;
 }
 
-bool MQS_system::add_literals_value()
+bool MQS_system::add_literal_value()
 {
     for (i = 0; i < params.size(); i = i + 2)
     {
-        if ( (params[i].is_known() == 1) and (params[i+1].is_known() == 1) and ((params[i+1].value ^ params[i].value) == 0) )
+        if ((params[i].is_known() == 1) and (params[i + 1].is_known() == 1) and ((params[i + 1].value ^ params[i].value) == 0))
         {
             return 1;
         }
-        if ( (params[i].is_known()) ^ (params[i+1].is_known()) )
+        if ((params[i].is_known()) ^ (params[i + 1].is_known()))
         {
             if (params[i].is_known() == 1)
             {
-                params[i+1].value = (params[i].value ^ 1);
+                params[i + 1].value = (params[i].value ^ 1);
             }
             else
             {
-                params[i].value = (params[i+1].value ^ 1);
+                params[i].value = (params[i + 1].value ^ 1);
             }
         }
     }
-    return 0;
-}
-
-bool add_literal_value(literal new_lit)
-{
-    if (params[new_lit.id].is_known == 1 and params[new_lit.id].value != new_lit.value)
-    {
-        return 1;
-    }
-    if ( (new_lit.id % 2 == 1) and (params[new_lit.id - 1].is_known) and (new_lit.value == params[new_lit.id - 1].value) )
-    {
-        return 1;
-    }
-    if ( (new_lit.id % 2 == 0) and (params[new_lit.id + 1].is_known) and (new_lit.value == params[new_lit.id + 1].value) )
-    {
-        return 1;
-    }
-
-    params[new_lit.id] == new_lit;
-
     return 0;
 }
 
@@ -242,7 +219,14 @@ struct SparseEquation // то есть вместо [1, 0, 0, 1, 0] -> [0, 3]
     }
     int leading_var() const // индекс самой первой переменной в уравнении
     {
-        return indices.empty() ? -1 : indices.front();
+        if (indices.empty())
+        {
+            return -1;
+        }
+        else
+        {
+            return indices.front();
+        }
     }
 };
 
@@ -288,11 +272,10 @@ bool MQS_system::solve_gauss()
     {
         SparseEquation sp_eq;
         sp_eq.free_term = 0;
-        const auto &literals = eq.get_param_form();
-        for (const auto &lit : literals)
+        const auto &raw_ids = eq.get_ids();
+        for (int raw_id : raw_ids)
         {
-            int raw_id = lit.get_id(); // id литерала (нч == нот(xi) == xi xor 1 -- 1 уносим в free_term)
-            int var_id = raw_id / 2;   //  x_i имеет индекс i = raw_id / 2
+            int var_id = raw_id / 2; //  x_i имеет индекс i = raw_id / 2
             sp_eq.indices.push_back(var_id);
             if (raw_id % 2 != 0) // (нч == нот(xi) == xi xor 1 -- 1 уносим в free_term)
             {
@@ -352,10 +335,4 @@ bool MQS_system::solve_gauss()
         }
     }
     return false; // система совместна
-}
-
-MQS_system MQS_system::create(std::string filepath)
-{
-    //В разработке
-    return NULL;
 }
