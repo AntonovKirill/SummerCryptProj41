@@ -114,10 +114,9 @@ MQS_system::MQS_system(std::vector<equation> equations0) : params(), equations(e
     {
         for (int j = 0; j < equations[i].get_ids().size(); j++)
         {
-            if ((equations[i].get_ids()[j] / 2 * 2 + 1) > params.size())
+            if ((equations[i].get_ids()[j] | 1) > params.size())
             {
-                // params.resize((equations[i].get_ids()[j] / 2 * 2 + 2), literal(-1, 4));
-                params.resize((equations[i].get_ids()[j] / 2 * 2 + 2));
+                params.resize( (equations[i].get_ids()[j] | 0) + 2 );
             }
             params[equations[i].get_ids()[j]] = literal(equations[i].get_ids()[j]);
         }
@@ -330,14 +329,13 @@ bool MQS_system::unit_propagation(literal &x)
 void MQS_system::add_equation(equation eq)
 {
     equations.push_back(eq);
-    for (int i = 0; i < eq.get_ids().size(); i++)
-    {
-        // TODO: поправить в соответствии с полями классов equation и literal
-        // if (params[eq.get_ids()[i]].is_known() == 0 and eq.param_form[i].is_known() == 1)
-        // {
-        //     params[eq.get_ids()[i]] = eq.param_form[i];
-        // }
-    }
+    for (int i = 0; i < eq.ids.size(); i++)
+	{
+		if ( (eq.ids[i] | 1) > params.size() )
+		{
+			params.resize( (eq.ids[i] | 0) + 2);
+		}
+	}
 }
 
 bool MQS_system::is_linear()
