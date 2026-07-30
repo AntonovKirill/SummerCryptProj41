@@ -11,12 +11,11 @@
 
 class literal
 {
-private:
+public:
     int id;             // Идентификационный номер литерала равный 2i для x_i и 2i+1 для NOT(x_i).
     std::uint8_t value; // Найденное в ходе решения значение.
 
 
-public:
     literal();
     literal(int id0);
     literal(int id0, std::uint8_t value0);
@@ -43,7 +42,7 @@ public:
 
 class equation
 {
-private:
+public:
     bool Is_line;         // В рамках данной работы уравнения могут быть только линейными или квадратичные.
     std::vector<int> ids; // Задает порядок литералов в уравнении.
     /*
@@ -72,7 +71,6 @@ private:
         x1 AND x2 XOR x3 = 0
     */
 
-public:
     equation();
     equation(bool Is_line0);
     equation(const std::vector<int> &ids0);
@@ -100,12 +98,11 @@ public:
 
 class MQS_system
 {
-private:
+public:
     // TODO: разобраться, почему в комментарии сказано про указатели, а на деле просто объект
     std::vector<literal> params;     // Массив указателей литералы используемые системы (и сопряженые им)
     std::vector<equation> equations; // Массив уравнений системы
 
-public:
     MQS_system();
     MQS_system(std::vector<equation> equations0);
     /*
