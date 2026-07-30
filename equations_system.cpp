@@ -86,10 +86,10 @@ void equation::set_Is_line(bool Is_line0)
     Is_line = Is_line0;
 }
 
-// void equation::set_param_form(std::vector<literal> param_form0)
-// {
-//     param_form = param_form0;
-// }
+void equation::set_ids(std::vector<int> ids0)
+{
+	ids = ids0;
+}
 
 bool equation::get_Is_line() const
 {
