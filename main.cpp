@@ -1,8 +1,10 @@
 #include <iostream>
 #include <string>
 #include <fstream>
+
 #include "search_tree.hpp"
 #include "equations_system.hpp"
+#include "linearizing_set.hpp"
 
 int main(int argc, char *argv[])
 {
@@ -84,19 +86,22 @@ int main(int argc, char *argv[])
 
     std::cout << "Reading file: " << filename << " ..." << std::endl;
 
-    std::ifstream file(filename);
-    if (!file.is_open())
-    {
-        std::cout << "ERROR: cannot open file!" << std::endl;
-        return 1;
-    }
+    // std::ifstream file(filename);
+    // if (!file.is_open())
+    // {
+    //     std::cout << "ERROR: cannot open file!" << std::endl;
+    //     return 1;
+    // }
 
-    std::string word;
-    int vars, eqs;
-    file >> word >> vars;
-    file >> word >> eqs;
+    // std::string word;
+    // int vars, eqs;
+    // file >> word >> vars;
+    // file >> word >> eqs;
 
-    std::cout << "Found " << vars << " variables and " << eqs << " equations" << std::endl;
+    MQS_system system = create(filename);
+
+    std::cout << "Found " << system.params.size() / 2 - 1 << " variables and " << 
+                 system.equations.size() << " equations" << std::endl;
     std::cout << std::endl;
 
     std::cout << "Algorithm: ";
@@ -138,7 +143,6 @@ int main(int argc, char *argv[])
     }
 
     std::cout << std::endl;
-    MQS_system system;
     SearchTree tree(system);
     std::cout << "=== STARTING SEARCH ===" << std::endl;
 

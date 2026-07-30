@@ -23,14 +23,7 @@ SearchTree::SearchTree(MQS_system& sys)
     steps = 0;
     root = nullptr;
 
-    int maxId = 0;
-    for (const auto& lit : system->get_params())
-    {
-        if (lit.get_id() > maxId)
-        {
-            maxId = lit.get_id();
-        }
-    }
+    int maxId = sys.params.size() - 1;
     varCount = (maxId + 1) / 2;
 
     saveState();
@@ -81,24 +74,26 @@ bool SearchTree::backtrack(SearchNode* node)
 
     saveState();
 
-    if (!unitPropagation())
-    {
-        restoreState();
-        return false;
-    }
+    // считаем, что на этом этапе нет литералов, по которым
+    // можно было бы выполнить UP rule
+    // if (!unitPropagation())
+    // {
+    //     restoreState();
+    //     return false;
+    // }
 
     if (isComplete())
     {
         if (checkSolution())
         {
-           
-            return true;
+            return true;  // система совместна, решение найдено
         }
         restoreState();
-        return false;
+        return false;  // система несовместна
     }
 
     int v = selectVariable();
+    // этот if выглядит избыточным
     if (v == -1)
     {
         restoreState();
@@ -138,33 +133,24 @@ bool SearchTree::backtrack(SearchNode* node)
     return false;
 }
 
-bool SearchTree::unitPropagation()
-{
-    bool conflict = system->unit_propagation();
-    return !conflict;
-}
+// bool SearchTree::unitPropagation()
+// {
+//     bool conflict = system->unit_propagation();
+//     return !conflict;
+// }
 
 bool SearchTree::isComplete()
 {
     auto params = system->get_params();
     
-    std::vector<bool> known(varCount, false);
     for (const auto& lit : params)
     {
         int id = lit.get_id();
-        if (id % 2 == 0 && id / 2 < varCount && lit.is_known())
-        {
-            known[id / 2] = true;
-        }
-    }
-    
-    for (int i = 0; i < varCount; ++i)
-    {
-        if (!known[i])
-        {
+
+        if (!lit.is_known())
             return false;
-        }
     }
+
     return true;
 }
 

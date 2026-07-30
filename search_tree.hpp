@@ -21,7 +21,7 @@ public:
 
 class SearchTree
 {
-private:
+public:
     SearchNode* root;
     int varCount;
     int steps;
@@ -35,7 +35,6 @@ private:
     void restoreState();
     void applyState(const std::vector<literal>& params, const std::vector<equation>& equations);
 
-public:
     SearchTree(MQS_system& sys);
     ~SearchTree();
 

@@ -25,7 +25,7 @@ std::uint8_t literal::get_value() const
     return value;
 }
 
-int literal::get_id()
+int literal::get_id() const
 {
     return this->id;
 }
@@ -54,7 +54,7 @@ void literal::destroy()
     delete this;
 }
 
-bool literal::is_known()
+bool literal::is_known() const
 {
     return (value <= 1);
 }
