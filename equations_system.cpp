@@ -354,21 +354,19 @@ bool MQS_system::is_linear()
 
 bool MQS_system::add_literal_value(literal new_lit)
 {
-	if ((params[i].is_known() == 1) and (params[i + 1].is_known() == 1) and ((params[i + 1].value ^ params[i].value) == 0))
+	if (params[new_lit.get_id()].is_known() == 1)
 	{
 		return 1;
 	}
-	if ((params[i].is_known()) ^ (params[i + 1].is_known()))
+	if (params[new_lit.get_id() ^ 1].is_known() == 1)
 	{
-		if (params[i].is_known() == 1)
-		{
-			params[i + 1].value = (params[i].value ^ 1);
-		}
-		else
-		{
-			params[i].value = (params[i + 1].value ^ 1);
-		}
+		params[new_lit.get_id() ^ 1] = literal(new_lit.get_id() ^ 1, new_lit.get_value() ^ 1);
+		return 1;
 	}
+
+	params[new_lit.get_id()] = new_lit;
+	params[new_lit.get_id() ^ 1] = literal(new_lit.get_id() ^ 1, new_lit.get_value() ^ 1);
+
     return 0;
 }
 
