@@ -4,7 +4,7 @@
 #include "search_tree.hpp"
 #include "equations_system.hpp"
 
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
     std::string filename;
     std::string algorithm = "jump";
@@ -138,11 +138,8 @@ int main(int argc, char* argv[])
     }
 
     std::cout << std::endl;
-
     MQS_system system;
-   
     SearchTree tree(system);
-
     std::cout << "=== STARTING SEARCH ===" << std::endl;
 
     if (tree.solve())

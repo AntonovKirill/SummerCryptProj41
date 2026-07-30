@@ -28,6 +28,7 @@ void linearizing_set::process_tasks(MQS_system &mqs) // перебор 2^m по�
     for (size_t task_index = 0; task_index < total_tasks; ++task_index)
     {
         MQS_system current_mqs = mqs; // делаем копию исходной системы для текущей подзадачи
+        bool conflict = false;
         for (size_t i = 0; i < m; ++i)
         {
             bool bit_val = (task_index >> i) & 1;
@@ -41,17 +42,22 @@ void linearizing_set::process_tasks(MQS_system &mqs) // перебор 2^m по�
                 val_char = '0';
             }
             literals_set[i].set_value(val_char);
-            current_mqs.unit_propagation(literals_set[i]);
-        }
-        // TODO: зачем эта строчка, что она значит?
-        current_mqs = current_mqs.unit_propagation();
-        if (current_mqs.is_linear() == 0)
-        {
-            bool is_inconsistent = current_mqs.solve_gauss();
-            if (!is_inconsistent) // если 0 (совместна)
+            if (current_mqs.unit_propagation(literals_set[i]))
             {
-                std::cout << "Подзадача " << task_index << " успешно решена!\n";
+                conflict = true;
+                break; // Ветвь несовместна, дальше подставлять биты нет смысла
             }
         }
+        if (conflict)
+        {
+            continue;
+        }
+        // TODO: зачем эта строчка, что она значит?
+        bool is_inconsistent = current_mqs.solve_gauss();
+        if (!is_inconsistent) // 0 = система совместна
+        {
+            std::cout << "Подзадача " << task_index << " успешно решена!\n";
+        }
     }
+}
 }
