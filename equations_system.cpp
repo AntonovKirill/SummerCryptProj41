@@ -370,6 +370,23 @@ bool MQS_system::add_literal_value(literal new_lit)
     return 0;
 }
 
+bool MQS_system::add_literal_values()
+{
+	for (int i=2; i < params.size(); i++)
+	{
+		if ( params[i].is_known() == 1 and params[i^1].is_known() == 1 and params[i].get_value() == params[i^1].get_value() )
+		{
+			return 1;
+		}
+		if ( params[i].is_known() == 1 and params[i^1].is_known() == 0 )
+		{
+			params[i^1] = literal(i^1, params[i].get_value()^1);
+		}
+	}
+
+    return 0;
+}
+
 // вспомогательная структура для разреженного уравнения
 struct SparseEquation // то есть вместо [1, 0, 0, 1, 0] -> [0, 3]
 {
