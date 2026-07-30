@@ -1,4 +1,5 @@
 #include "search_tree.hpp"
+#include <iostream>
 
 SearchNode::SearchNode(int n, int v, SearchNode* p)
 {
@@ -9,10 +10,10 @@ SearchNode::SearchNode(int n, int v, SearchNode* p)
     right = nullptr;
 }
 
-// такой конструктор не объявлен
-SearchTree::SearchTree(int vars)
+SearchTree::SearchTree(MQS_system& sys)
 {
-    count = vars;
+    system = &sys;
+    count = system->get_params().size();
     steps = 0;
     root = nullptr;
     assign.resize(count, -1);
@@ -27,6 +28,11 @@ bool SearchTree::solve()
 bool SearchTree::backtrack(SearchNode* node)
 {
     steps++;
+
+    if (!unitPropagation())
+    {
+        return false;  
+    }
 
     if (isComplete())
     {
@@ -57,6 +63,53 @@ bool SearchTree::backtrack(SearchNode* node)
     return false;
 }
 
+bool SearchTree::unitPropagation()
+{
+    bool changed = true;
+    while (changed)
+    {
+        changed = false;
+
+        for (const auto& eq : system->get_equations())
+        {
+            int unknownVar = -1;
+            int unknownCount = 0;
+            int xorSum = 0;
+
+            for (int rawId : eq.get_ids())
+            {
+                int var = rawId / 2;
+                int val = assign[var];
+
+                if (val == -1)
+                {
+                    unknownVar = var;
+                    unknownCount++;
+                }
+                else
+                {
+                    if (rawId % 2 == 1) 
+                    {
+                        val = 1 - val;
+                    }
+                    xorSum ^= val;
+                }
+            }
+
+            if (unknownCount == 1)
+            {
+                assign[unknownVar] = xorSum;
+                changed = true;
+            }
+            else if (unknownCount == 0 && xorSum != 0)
+            {
+                return false;  
+            }
+        }
+    }
+    return true;
+}
+
 bool SearchTree::isComplete()
 {
     for (int i = 0; i < count; i++)
@@ -68,9 +121,38 @@ bool SearchTree::isComplete()
 
 bool SearchTree::checkSolution()
 {
-    // ПОКА ЗАГЛУШКА
+    for (const auto& eq : system->get_equations())
+    {
+        if (!checkEquation(eq))
+        {
+            return false;
+        }
+    }
     return true;
 }
+
+bool SearchTree::checkEquation(const equation& eq)
+{
+    int xorSum = 0;
+
+    for (int rawId : eq.get_ids())
+    {
+        int var = rawId / 2;
+        int val = assign[var];
+
+        if (val == -1) return false;  
+
+        if (rawId % 2 == 1)
+        {
+            val = 1 - val;
+        }
+
+        xorSum ^= val;
+    }
+
+    return xorSum == 0;
+}
+
 
 int SearchTree::selectVariable()
 {
