@@ -7,7 +7,7 @@
 #include "equations_system.hpp"
 
 
-literal::literal() : id(0), value(2) {}
+literal::literal() : id(-1), value(2) {}
 
 literal::literal(int id0) : id(id0), value(2) {}
 
