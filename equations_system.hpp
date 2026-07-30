@@ -32,9 +32,9 @@ public:
     void set_value(std::uint8_t value0);
 
     std::uint8_t get_value() const;
-    int get_id();
+    int get_id() const;
 
-    bool is_known();
+    bool is_known() const;
     // Функция предназаначена для проверки заданныли значения литерала.
     // Возвращает 1 если значеничение литерала уже было инициализровано ранее.
     // Возвращает 0 в противном случае.
