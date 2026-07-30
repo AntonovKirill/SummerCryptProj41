@@ -31,7 +31,7 @@ void linearizing_set::process_tasks(MQS_system &mqs) // перебор 2^m по�
         bool conflict = false;
         for (size_t i = 0; i < m; ++i)
         {
-            bool bit_val = (task_index >> i) & 1;
+            bool bit_val = (task_index >> i) & 1; // считываем iый бит числа task_index
             char val_char;
             if (bit_val == true)
             {
@@ -41,8 +41,8 @@ void linearizing_set::process_tasks(MQS_system &mqs) // перебор 2^m по�
             {
                 val_char = '0';
             }
-            literals_set[i].set_value(val_char);
-            if (current_mqs.unit_propagation(literals_set[i]))
+            literals_set[i].set_value(val_char);               // сохраняет символьное значение внутри iого литерала
+            if (current_mqs.unit_propagation(literals_set[i])) // подставляет зафиксированный литерал в текущую систему
             {
                 conflict = true;
                 break; // ветвь несовместна, дальше подставлять биты нет смысла
@@ -58,5 +58,4 @@ void linearizing_set::process_tasks(MQS_system &mqs) // перебор 2^m по�
             std::cout << "Подзадача " << task_index << " успешно решена!\n";
         }
     }
-}
 }
