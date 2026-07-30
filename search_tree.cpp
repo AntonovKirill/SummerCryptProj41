@@ -48,7 +48,7 @@ void SearchTree::saveState()
 
 void SearchTree::restoreState()
 {
-    if (stateStack.size() < 2)
+    if (stateStack.empty())
     {
         return;
     }
@@ -59,6 +59,7 @@ void SearchTree::restoreState()
     {
         applyState(stateStack.top().first, stateStack.top().second);
     }
+   
 }
 
 void SearchTree::applyState(const std::vector<literal>& params,
