@@ -80,54 +80,63 @@ bool SearchTree::backtrack(SearchNode* node)
 {
     steps++;
 
+    std::cout << "1 " << steps << " " << stateStack.size() << " " <<  std::endl;
     saveState();
 
     if (isComplete())
     {
         if (checkSolution())
         {
+            std::cout << "2 solution " << steps << " " << stateStack.size() << std::endl;
             return true;
         }
         restoreState();
+        std::cout << "3 " << steps << " contradiction" << std::endl;
         return false;
     }
 
     int v = selectVariable();
-    if (v == -1)
-    {
-        restoreState();
-        return false;
-    }
+    std::cout << "4 branching " << v << " = 0" << std::endl;
+    
+    // if (v == -1)
+    // {
+    //     restoreState();
+    //     return false;
+    // }
 
     literal lit0(2 * v, 0);
-    if (!system->add_literal_value(lit0))
+    if (!system->unit_propagation(lit0))
     {
         SearchNode* child0 = new SearchNode(v, 0, node);
         node->left = child0;
         if (backtrack(child0))
         {
+            std::cout << "5 solution " << steps << " " << stateStack.size() << std::endl;
             return true;
         }
         delete child0;
         node->left = nullptr;
     }
-    restoreState();
+    // restoreState();
 
-    saveState();
+    // saveState();
+    std::cout << "6 branching " << v << " = 1" << std::endl;
     literal lit1(2 * v, 1);
-    if (!system->add_literal_value(lit1))
+    if (!system->unit_propagation(lit1))
     {
         SearchNode* child1 = new SearchNode(v, 1, node);
         node->right = child1;
         if (backtrack(child1))
         {
+            std::cout << "7 solution " << steps << " " << stateStack.size() << std::endl;
             return true;
         }
         delete child1;
         node->right = nullptr;
     }
+    
     restoreState();
-
+    std::cout << "8 " << steps << " contradiction" << std::endl;
     return false;
 }
 
