@@ -245,32 +245,22 @@ bool MQS_system::unit_propagation(literal &x)
                         return true; // противоречие (1 == 0 & ...)
                     }
                 }
-                // y == 0 или z == 0, но x уже == 1
-                if ((y_known && y_val == 0) || (z_known && z_val == 0))
+                // y == 1 или z == 1, но x уже == 0
+                if ((y_known && y_val == 1) && (z_known && z_val == 1))
                 {
-                    if (x_known && x_val == 1)
+                    if (x_known && x_val == 0)
                     {
                         return true; // противоречие
                     }
                 }
                 // --- ПРАВИЛА ВЫВОДА ---
-                // rule 2: y = 1 => equation превращается в x = z (линейное: x XOR z = 0)
-                if (y_known && y_val == 1)
+                if (y_known && y_val == 1 && z_known && z_val == 1)
                 {
-                    equation lin_eq;
-                    lin_eq.set_Is_line(true);
-                    lin_eq.set_ids({x_raw, z_raw});
-                    new_equations.push_back(lin_eq);
-                    changed = true;
-                    continue;
-                }
-                // rule 3: z = 1 => equation превращается в x = y (линейное: x XOR y = 0)
-                if (z_known && z_val == 1)
-                {
-                    equation lin_eq;
-                    lin_eq.set_Is_line(true);
-                    lin_eq.set_ids({x_raw, y_raw});
-                    new_equations.push_back(lin_eq);
+                    literal x_lit(x_raw / 2, (x_raw % 2 == 0) ? 1 : 0);
+                    if (add_literal_value(x_lit))
+                    {
+                        return true;
+                    }
                     changed = true;
                     continue;
                 }
@@ -308,6 +298,26 @@ bool MQS_system::unit_propagation(literal &x)
                     literal y_lit(y_raw / 2, (y_raw % 2 == 0) ? 0 : 1);
                     if (add_literal_value(y_lit))
                         return true;
+                    changed = true;
+                    continue;
+                }
+                // rule 2: y = 1 => equation превращается в x = z (линейное: x XOR z = 0)
+                if (y_known && y_val == 1)
+                {
+                    equation lin_eq;
+                    lin_eq.set_Is_line(true);
+                    lin_eq.set_ids({x_raw, z_raw});
+                    new_equations.push_back(lin_eq);
+                    changed = true;
+                    continue;
+                }
+                // rule 3: z = 1 => equation превращается в x = y (линейное: x XOR y = 0)
+                if (z_known && z_val == 1)
+                {
+                    equation lin_eq;
+                    lin_eq.set_Is_line(true);
+                    lin_eq.set_ids({x_raw, y_raw});
+                    new_equations.push_back(lin_eq);
                     changed = true;
                     continue;
                 }
