@@ -9,8 +9,8 @@
 class SearchNode
 {
 public:
-    int num;                     
-    int val;                     
+    int num;
+    int val;
     SearchNode* left;
     SearchNode* right;
     SearchNode* par;
@@ -29,8 +29,9 @@ public:
 
     std::stack< std::pair< std::vector<literal>, std::vector<equation> > > stateStack;
 
-    bool unitPropagation();
-    bool checkEquation(const equation& eq);
+    std::vector<int> inputVars;
+
+    bool checkEquation(const equation& eq) const;
     void saveState();
     void restoreState();
     void applyState(const std::vector<literal>& params, const std::vector<equation>& equations);
@@ -40,10 +41,10 @@ public:
 
     bool solve();
     bool backtrack(SearchNode* node);
-    bool isComplete();
-    bool checkSolution();
-    int selectVariable();
-    void printSolution();
+    bool isComplete() const;
+    bool checkSolution() const;
+    int selectVariable() const;
+    void printSolution() const;
 };
 
 #endif
