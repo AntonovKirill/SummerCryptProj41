@@ -233,6 +233,7 @@ int SearchTree::selectVariable() const
         for (int rawId : eq.ids)
         {
             int v = rawId / 2;
+            
             if (v < varCount && !known[v] && isInput[v])
             {
                 freq[v]++;
@@ -244,7 +245,8 @@ int SearchTree::selectVariable() const
     int bestFreq = -1;
     for (int i = 0; i < varCount; ++i)
     {
-        if (!known[i] && isInput[i] && freq[i] > bestFreq)
+        // ТОЛЬКО входные и НЕ известные
+        if (isInput[i] && !known[i] && freq[i] > bestFreq)
         {
             bestFreq = freq[i];
             best = i;
@@ -258,15 +260,7 @@ int SearchTree::selectVariable() const
 
     for (int i = 0; i < varCount; ++i)
     {
-        if (!known[i] && isInput[i])
-        {
-            return i;
-        }
-    }
-
-    for (int i = 0; i < varCount; ++i)
-    {
-        if (!known[i])
+        if (isInput[i] && !known[i])
         {
             return i;
         }
