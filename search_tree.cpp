@@ -23,8 +23,17 @@ SearchTree::SearchTree(MQS_system& sys)
     steps = 0;
     root = nullptr;
 
-    int maxId = sys.params.size() - 1;
+    int maxId = 0;
+    for (const auto& lit : sys.params)
+    {
+        if (lit.get_id() > maxId)
+        {
+            maxId = lit.get_id();
+        }
+    }
     varCount = (maxId + 1) / 2;
+
+    inputVars = sys.input_vars;
 
     saveState();
 }
@@ -36,7 +45,7 @@ SearchTree::~SearchTree()
 
 void SearchTree::saveState()
 {
-    stateStack.push({system->get_params(), system->get_equations()});
+    stateStack.push({system->params, system->equations});
 }
 
 void SearchTree::restoreState()
@@ -45,21 +54,20 @@ void SearchTree::restoreState()
     {
         return;
     }
-    
+
     stateStack.pop();
-    
+
     if (!stateStack.empty())
     {
         applyState(stateStack.top().first, stateStack.top().second);
     }
-   
 }
 
 void SearchTree::applyState(const std::vector<literal>& params,
                             const std::vector<equation>& equations)
 {
-    system->set_params(params);
-    system->set_equations(equations);
+    system->params = params;
+    system->equations = equations;
 }
 
 bool SearchTree::solve()
@@ -74,26 +82,17 @@ bool SearchTree::backtrack(SearchNode* node)
 
     saveState();
 
-    // считаем, что на этом этапе нет литералов, по которым
-    // можно было бы выполнить UP rule
-    // if (!unitPropagation())
-    // {
-    //     restoreState();
-    //     return false;
-    // }
-
     if (isComplete())
     {
         if (checkSolution())
         {
-            return true;  // система совместна, решение найдено
+            return true;
         }
         restoreState();
-        return false;  // система несовместна
+        return false;
     }
 
     int v = selectVariable();
-    // этот if выглядит избыточным
     if (v == -1)
     {
         restoreState();
@@ -112,10 +111,9 @@ bool SearchTree::backtrack(SearchNode* node)
         delete child0;
         node->left = nullptr;
     }
-
     restoreState();
-    saveState();
 
+    saveState();
     literal lit1(2 * v, 1);
     if (!system->add_literal_value(lit1))
     {
@@ -128,35 +126,39 @@ bool SearchTree::backtrack(SearchNode* node)
         delete child1;
         node->right = nullptr;
     }
-
     restoreState();
+
     return false;
 }
 
-// bool SearchTree::unitPropagation()
-// {
-//     bool conflict = system->unit_propagation();
-//     return !conflict;
-// }
-
-bool SearchTree::isComplete()
+bool SearchTree::isComplete() const
 {
-    auto params = system->get_params();
-    
-    for (const auto& lit : params)
-    {
-        int id = lit.get_id();
+    const auto& params = system->params;
 
-        if (!lit.is_known())
+    for (int inputVarId : inputVars)
+    {
+        int varIndex = inputVarId / 2;
+        bool found = false;
+        for (const auto& lit : params)
+        {
+            if (lit.get_id() == 2 * varIndex && lit.is_known())
+            {
+                found = true;
+                break;
+            }
+        }
+        if (!found)
+        {
             return false;
+        }
     }
 
     return true;
 }
 
-bool SearchTree::checkSolution()
+bool SearchTree::checkSolution() const
 {
-    for (const auto& eq : system->get_equations())
+    for (const auto& eq : system->equations)
     {
         if (!checkEquation(eq))
         {
@@ -166,19 +168,18 @@ bool SearchTree::checkSolution()
     return true;
 }
 
-bool SearchTree::checkEquation(const equation& eq)
+bool SearchTree::checkEquation(const equation& eq) const
 {
-    auto params = system->get_params();
     int xorSum = 0;
 
-    for (int rawId : eq.get_ids())
+    for (int rawId : eq.ids)
     {
         int var = rawId / 2;
-        int litId = 2 * var;  // id для xi
+        int litId = 2 * var;
 
         bool known = false;
         int val = 0;
-        for (const auto& lit : params)
+        for (const auto& lit : system->params)
         {
             if (lit.get_id() == litId && lit.is_known())
             {
@@ -202,10 +203,10 @@ bool SearchTree::checkEquation(const equation& eq)
     return xorSum == 0;
 }
 
-int SearchTree::selectVariable()
+int SearchTree::selectVariable() const
 {
-    auto params = system->get_params();
-  
+    const auto& params = system->params;
+
     std::vector<bool> known(varCount, false);
     for (const auto& lit : params)
     {
@@ -215,14 +216,24 @@ int SearchTree::selectVariable()
             known[id / 2] = true;
         }
     }
-    
-    std::vector<int> freq(varCount, 0);
-    for (const auto& eq : system->get_equations())
+
+    std::vector<bool> isInput(varCount, false);
+    for (int inputVarId : inputVars)
     {
-        for (int rawId : eq.get_ids())
+        int varIndex = inputVarId / 2;
+        if (varIndex < varCount)
+        {
+            isInput[varIndex] = true;
+        }
+    }
+
+    std::vector<int> freq(varCount, 0);
+    for (const auto& eq : system->equations)
+    {
+        for (int rawId : eq.ids)
         {
             int v = rawId / 2;
-            if (v < varCount && !known[v])
+            if (v < varCount && !known[v] && isInput[v])
             {
                 freq[v]++;
             }
@@ -233,7 +244,7 @@ int SearchTree::selectVariable()
     int bestFreq = -1;
     for (int i = 0; i < varCount; ++i)
     {
-        if (!known[i] && freq[i] > bestFreq)
+        if (!known[i] && isInput[i] && freq[i] > bestFreq)
         {
             bestFreq = freq[i];
             best = i;
@@ -247,6 +258,14 @@ int SearchTree::selectVariable()
 
     for (int i = 0; i < varCount; ++i)
     {
+        if (!known[i] && isInput[i])
+        {
+            return i;
+        }
+    }
+
+    for (int i = 0; i < varCount; ++i)
+    {
         if (!known[i])
         {
             return i;
@@ -256,12 +275,11 @@ int SearchTree::selectVariable()
     return -1;
 }
 
-
-void SearchTree::printSolution()
+void SearchTree::printSolution() const
 {
     std::cout << "Решение найдено!" << std::endl;
-    auto params = system->get_params();
-    
+    const auto& params = system->params;
+
     std::vector<int> solution(varCount, -1);
     for (const auto& lit : params)
     {
@@ -271,7 +289,7 @@ void SearchTree::printSolution()
             solution[id / 2] = lit.get_value();
         }
     }
-    
+
     for (int i = 0; i < varCount; ++i)
     {
         if (solution[i] != -1)
