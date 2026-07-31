@@ -245,7 +245,6 @@ int SearchTree::selectVariable() const
     int bestFreq = -1;
     for (int i = 0; i < varCount; ++i)
     {
-        // ТОЛЬКО входные и НЕ известные
         if (isInput[i] && !known[i] && freq[i] > bestFreq)
         {
             bestFreq = freq[i];
