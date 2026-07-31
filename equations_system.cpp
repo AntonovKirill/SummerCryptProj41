@@ -6,7 +6,6 @@
 
 #include "equations_system.hpp"
 
-
 literal::literal() : id(-1), value(2) {}
 
 literal::literal(int id0) : id(id0), value(2) {}
@@ -65,8 +64,7 @@ equation::equation(bool Is_line0) : Is_line(Is_line0), ids() {}
 
 equation::equation(const std::vector<int> &ids) : Is_line(0), ids(ids) {}
 
-equation::equation(bool Is_line0, const std::vector<int> &ids) : 
-    Is_line(Is_line0), ids(ids) {}
+equation::equation(bool Is_line0, const std::vector<int> &ids) : Is_line(Is_line0), ids(ids) {}
 
 equation::~equation() {}
 /*
@@ -88,7 +86,7 @@ void equation::set_Is_line(bool Is_line0)
 
 void equation::set_ids(std::vector<int> ids0)
 {
-	ids = ids0;
+    ids = ids0;
 }
 
 bool equation::get_Is_line() const
@@ -116,7 +114,7 @@ MQS_system::MQS_system(std::vector<equation> equations0) : params(), equations(e
         {
             if ((equations[i].get_ids()[j] | 1) > params.size())
             {
-                params.resize( (equations[i].get_ids()[j] | 0) + 2 );
+                params.resize((equations[i].get_ids()[j] | 0) + 2);
             }
             params[equations[i].get_ids()[j]] = literal(equations[i].get_ids()[j]);
         }
@@ -330,12 +328,12 @@ void MQS_system::add_equation(equation eq)
 {
     equations.push_back(eq);
     for (int i = 0; i < eq.ids.size(); i++)
-	{
-		if ( (eq.ids[i] | 1) > params.size() )
-		{
-			params.resize( (eq.ids[i] | 0) + 2);
-		}
-	}
+    {
+        if ((eq.ids[i] | 1) > params.size())
+        {
+            params.resize((eq.ids[i] | 0) + 2);
+        }
+    }
 }
 
 bool MQS_system::is_linear()
@@ -352,35 +350,35 @@ bool MQS_system::is_linear()
 
 bool MQS_system::add_literal_value(literal new_lit)
 {
-	if (params[new_lit.get_id()].is_known() == 1)
-	{
-		return 1;
-	}
-	if (params[new_lit.get_id() ^ 1].is_known() == 1)
-	{
-		params[new_lit.get_id() ^ 1] = literal(new_lit.get_id() ^ 1, new_lit.get_value() ^ 1);
-		return 1;
-	}
+    if (params[new_lit.get_id()].is_known() == 1)
+    {
+        return 1;
+    }
+    if (params[new_lit.get_id() ^ 1].is_known() == 1)
+    {
+        params[new_lit.get_id() ^ 1] = literal(new_lit.get_id() ^ 1, new_lit.get_value() ^ 1);
+        return 1;
+    }
 
-	params[new_lit.get_id()] = new_lit;
-	params[new_lit.get_id() ^ 1] = literal(new_lit.get_id() ^ 1, new_lit.get_value() ^ 1);
+    params[new_lit.get_id()] = new_lit;
+    params[new_lit.get_id() ^ 1] = literal(new_lit.get_id() ^ 1, new_lit.get_value() ^ 1);
 
     return 0;
 }
 
 bool MQS_system::add_literal_values()
 {
-	for (int i=2; i < params.size(); i++)
-	{
-		if ( params[i].is_known() == 1 and params[i^1].is_known() == 1 and params[i].get_value() == params[i^1].get_value() )
-		{
-			return 1;
-		}
-		if ( params[i].is_known() == 1 and params[i^1].is_known() == 0 )
-		{
-			params[i^1] = literal(i^1, params[i].get_value()^1);
-		}
-	}
+    for (int i = 2; i < params.size(); i++)
+    {
+        if (params[i].is_known() == 1 and params[i ^ 1].is_known() == 1 and params[i].get_value() == params[i ^ 1].get_value())
+        {
+            return 1;
+        }
+        if (params[i].is_known() == 1 and params[i ^ 1].is_known() == 0)
+        {
+            params[i ^ 1] = literal(i ^ 1, params[i].get_value() ^ 1);
+        }
+    }
 
     return 0;
 }
@@ -529,94 +527,96 @@ MQS_system create(std::string filepath)
 
     // читаем заголовок
     std::string header;
-	is >> header;
+    is >> header;
 
     int vars_cnt, input_vars_cnt, latches_cnt, output_vars_cnt, and_equations_cnt;
 
-	if (header == "aag")
-	{
-		is >> vars_cnt >> input_vars_cnt >> latches_cnt >> output_vars_cnt >> and_equations_cnt;
-	}
-	else
-	{
-		throw std::logic_error((std::string) "wrong format: \'aag\' expected but \'" + header + "\' found");
-	}
+    if (header == "aag")
+    {
+        is >> vars_cnt >> input_vars_cnt >> latches_cnt >> output_vars_cnt >> and_equations_cnt;
+    }
+    else
+    {
+        throw std::logic_error((std::string) "wrong format: \'aag\' expected but \'" + header + "\' found");
+    }
 
     // читаем номера входных переменных (литералов)
     std::vector<int> input_vars;
-	input_vars.resize(input_vars_cnt);
+    input_vars.resize(input_vars_cnt);
 
-	for (int i = 0; i < (int) input_vars_cnt; ++i)
-	{
-		is >> input_vars[i];
-		all_vars_set.insert(input_vars[i] & -2);
-	}
+    for (int i = 0; i < (int)input_vars_cnt; ++i)
+    {
+        is >> input_vars[i];
+        all_vars_set.insert(input_vars[i] & -2);
+    }
 
     // читаем номера выходных переменных
     std::vector<int> output_vars;
     output_vars.resize(output_vars_cnt);
 
-	for (int i = 0; i < output_vars_cnt; ++i)
-		is >> output_vars[i];
+    for (int i = 0; i < output_vars_cnt; ++i)
+        is >> output_vars[i];
 
     // читаем список квадратичных уравнений
     std::vector<equation> all_equations;
     all_equations.resize(and_equations_cnt);
-    
-	for (int i = 0; i < and_equations_cnt; ++i)
-	{
-		int x, y, z;
-		is >> x >> y >> z;
+
+    for (int i = 0; i < and_equations_cnt; ++i)
+    {
+        int x, y, z;
+        is >> x >> y >> z;
         equation eq(0, {std::min(y, z), std::max(y, z), x});
-		all_equations[i] = eq;
-		all_vars_set.insert(x & -2);
-	}
+        all_equations[i] = eq;
+        all_vars_set.insert(x & -2);
+    }
 
-	is >> header;
-	
-	if (header != "lin")
-	{
-		throw std::logic_error((std::string) "wrong format: \'lin\' expected but \'" + header + "\' found");
-	}
+    is >> header;
 
-	int linear_cnt;
-	is >> linear_cnt;
+    if (header != "lin")
+    {
+        throw std::logic_error((std::string) "wrong format: \'lin\' expected but \'" + header + "\' found");
+    }
 
-	int line_cnt = 0;
-	std::string line;
-	std::stringstream ss;
-	
-	while (line_cnt < linear_cnt && getline(is, line))
-	{
-		ss.clear();
-		ss << line;
+    int linear_cnt;
+    is >> linear_cnt;
 
-		int x, rem = 0;
-		std::vector<int> lits;
-		
-		while (ss >> x)
-		{
-			lits.push_back(x & -2);
-			rem ^= x & 1;
-			all_vars_set.insert(x & -2);
-		}
+    int line_cnt = 0;
+    std::string line;
+    std::stringstream ss;
 
-		if (lits.empty())
-			continue;
-		
-		sort(lits.begin(), lits.end());
-		lits[0] ^= rem;
+    while (line_cnt < linear_cnt && getline(is, line))
+    {
+        ss.clear();
+        ss << line;
+
+        int x, rem = 0;
+        std::vector<int> lits;
+
+        while (ss >> x)
+        {
+            lits.push_back(x & -2);
+            rem ^= x & 1;
+            all_vars_set.insert(x & -2);
+        }
+
+        if (lits.empty())
+            continue;
+
+        sort(lits.begin(), lits.end());
+        lits[0] ^= rem;
 
         equation eq(1, lits);
-		all_equations.push_back(eq);
-		++line_cnt;
-	}
+        all_equations.push_back(eq);
+        ++line_cnt;
+    }
 
-	if (linear_cnt != line_cnt)
-		std::cerr << "warning: " << "wrong linear constraints number: " 
+    if (linear_cnt != line_cnt)
+        std::cerr << "warning: " << "wrong linear constraints number: "
                   << linear_cnt << " expected but " << line_cnt << " found" << std::endl;
-    
+
     MQS_system mqs(all_equations);
-    
+    mqs.input_vars = input_vars;   // Записываем списки входов
+    mqs.output_vars = output_vars; // Записываем списки выходов
+
     return mqs;
 }

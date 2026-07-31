@@ -15,7 +15,6 @@ public:
     int id;             // Идентификационный номер литерала равный 2i для x_i и 2i+1 для NOT(x_i).
     std::uint8_t value; // Найденное в ходе решения значение.
 
-
     literal();
     literal(int id0);
     literal(int id0, std::uint8_t value0);
@@ -79,7 +78,7 @@ public:
         equation* create(Is_line0, param_form0);
         // Функция выше предназначена для корректного создания создания объекта уравнения.
     */
-   
+
     ~equation();
     void destroy();
     // Функция предназначена для корректного удаления объекта уравнения.
@@ -102,6 +101,8 @@ public:
     // TODO: разобраться, почему в комментарии сказано про указатели, а на деле просто объект
     std::vector<literal> params;     // Массив указателей литералы используемые системы (и сопряженые им)
     std::vector<equation> equations; // Массив уравнений системы
+    std::vector<int> input_vars;     // Входные переменные (литералы)
+    std::vector<int> output_vars;    // Выходные переменные
 
     MQS_system();
     MQS_system(std::vector<equation> equations0);
