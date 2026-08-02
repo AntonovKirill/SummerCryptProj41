@@ -124,8 +124,6 @@ MQS_system::MQS_system(std::vector<equation> equations0) : params(), equations(e
     {
         if (params[i].get_id() == -1)
         {
-            // TODO: разобраться, что делает эта строчка
-            // literal lit(i, params[i + static_cast<int>(std::pow(-1, i % 2))] ^ 1);
             literal lit(i, params[i ^ 1].get_value() ^ 1);
             params[i] = lit;
         }
@@ -186,20 +184,18 @@ bool MQS_system::unit_propagation(literal &x)
                 uint8_t accumulated_const = 0;
                 for (int raw_id : ids)
                 {
-                    int var_id = raw_id / 2;
-                    uint8_t val = params[var_id].get_value(); // значение переменной
-                    if (params[var_id].is_known())
+                    if (params[raw_id].is_known())
                     {
-                        uint8_t lit_val = (raw_id % 2 == 0) ? val : (val ^ 1);
+                        uint8_t lit_val = params[raw_id].get_value();
                         accumulated_const ^= lit_val;
-                        changed = true; // подставили значение — уравнение меняется
+                        changed = true; // подставили значение
                     }
                     else
                     {
-                        remaining_ids.push_back(raw_id); // переменная неизвестна, оставляем литерал
+                        remaining_ids.push_back(raw_id);
                     }
                 }
-                // если не осталось переменных в уравнении
+                // если не осталось свободных переменных
                 if (remaining_ids.empty())
                 {
                     if (accumulated_const != 0)
@@ -208,121 +204,144 @@ bool MQS_system::unit_propagation(literal &x)
                     }
                     continue; // 0 = 0, уравнение выполнено и удаляется
                 }
-                // учитываем накопившуюся константу 1 (над F_2 это инверсия одного из литералов)
+                // учитываем накопившуюся константу 1
                 if (accumulated_const != 0)
                 {
                     remaining_ids[0] ^= 1;
+                }
+                if (remaining_ids.size() == 1) // если остался ровно 1 литерал (например, raw_id = 6)
+                {
+                    int single_raw = remaining_ids[0];
+                    literal single_lit(single_raw, 1);
+                    if (!params[single_raw].is_known())
+                    {
+                        if (add_literal_value(single_lit))
+                            return true;
+                    }
+                    changed = true;
+                    continue;
                 }
                 eq.set_ids(remaining_ids);
                 new_equations.push_back(eq);
             }
             // КВАДРАТИЧНОЕ УРАВНЕНИЕ (x = y AND z)
-            // ids[0] = y, ids[1] = z, ids[2] = x
+            // ids[0] = x (результат), ids[1] = y, ids[2] = z
             else if (ids.size() == 3)
             {
                 int y_raw = ids[0], z_raw = ids[1], x_raw = ids[2];
-                uint8_t y_known = params[y_raw / 2].is_known();
-                uint8_t y_val = y_known ? (params[y_raw / 2].get_value() ^ (y_raw % 2)) : 2;
-                uint8_t z_known = params[z_raw / 2].is_known();
-                uint8_t z_val = z_known ? (params[z_raw / 2].get_value() ^ (z_raw % 2)) : 2;
-                uint8_t x_known = params[x_raw / 2].is_known();
-                uint8_t x_val = x_known ? (params[x_raw / 2].get_value() ^ (x_raw % 2)) : 2;
-                // --- ПРОВЕРКА ПРОТИВОРЕЧИЙ ---
+                // Рассчитываем текущие значения литералов (1, 0 или 2 - неизвестно)
+                uint8_t x_known = params[x_raw].is_known();
+                uint8_t x_val = x_known ? (params[x_raw].get_value() ^ (x_raw % 2)) : 2;
+                uint8_t y_known = params[y_raw].is_known();
+                uint8_t y_val = y_known ? (params[y_raw].get_value() ^ (y_raw % 2)) : 2;
+                uint8_t z_known = params[z_raw].is_known();
+                uint8_t z_val = z_known ? (params[z_raw].get_value() ^ (z_raw % 2)) : 2;
+                // ПРОВЕРКА ПРОТИВОРЕЧИЙ
+                // Если все 3 известны — проверяем выполнимость x == (y & z)
                 if (x_known && y_known && z_known)
                 {
                     if (x_val != (y_val & z_val))
-                    {
                         return true; // противоречие
-                    }
                     changed = true;
-                    continue; // уравнение выполнено, удаляем
+                    continue; // уравнение выполнено, не добавляем в new_equations (удаляем)
                 }
-                // x = 1, но y == 0 или z == 0
-                if (x_known && x_val == 1)
+                // x = 1, но один из операндов точно 0 -> Противоречие!
+                if (x_known && x_val == 1 && ((y_known && y_val == 0) || (z_known && z_val == 0)))
                 {
-                    if ((y_known && y_val == 0) || (z_known && z_val == 0))
-                    {
-                        return true; // противоречие (1 == 0 & ...)
-                    }
+                    return true;
                 }
-                // y == 1 или z == 1, но x уже == 0
-                if ((y_known && y_val == 1) && (z_known && z_val == 1))
+                // x = 0, но оба операнда точно 1 -> Противоречие!
+                if (x_known && x_val == 0 && y_known && y_val == 1 && z_known && z_val == 1)
                 {
-                    if (x_known && x_val == 0)
-                    {
-                        return true; // противоречие
-                    }
+                    return true;
                 }
-                // --- ПРАВИЛА ВЫВОДА ---
+                // ПРАВИЛА ВЫВОДА
+                // Rule 1: y = 1 и z = 1 => x = 1
                 if (y_known && y_val == 1 && z_known && z_val == 1)
                 {
-                    literal x_lit(x_raw / 2, (x_raw % 2 == 0) ? 1 : 0);
-                    if (add_literal_value(x_lit))
+                    literal x_lit(x_raw, 1);
+                    if (!params[x_raw].is_known())
                     {
-                        return true;
+                        if (add_literal_value(x_lit))
+                            return true;
+                    }
+                    changed = true;
+                    continue; // Уравнение выполнено
+                }
+                // Rule 4: x = 1 => y = 1 и z = 1
+                if (x_known && x_val == 1)
+                {
+                    literal y_lit(y_raw, 1);
+                    literal z_lit(z_raw, 1);
+                    if (!params[y_raw].is_known())
+                    {
+                        if (add_literal_value(y_lit))
+                            return true;
+                    }
+                    if (!params[z_raw].is_known())
+                    {
+                        if (add_literal_value(z_lit))
+                            return true;
                     }
                     changed = true;
                     continue;
                 }
-                // rule 4: x = 1 => y = 1 и z = 1
-                if (x_known && x_val == 1)
-                {
-                    literal y_lit(y_raw / 2, (y_raw % 2 == 0) ? 1 : 0);
-                    literal z_lit(z_raw / 2, (z_raw % 2 == 0) ? 1 : 0);
-                    if (add_literal_value(y_lit) || add_literal_value(z_lit))
-                        return true;
-                    changed = true;
-                    continue;
-                }
-                // rule 5: y = 0 или z = 0 => x = 0
+                // Rule 5: y = 0 или z = 0 => x = 0
                 if ((y_known && y_val == 0) || (z_known && z_val == 0))
                 {
-                    literal x_lit(x_raw / 2, (x_raw % 2 == 0) ? 0 : 1);
-                    if (add_literal_value(x_lit))
-                        return true;
+                    literal x_lit(x_raw, 0);
+                    if (!params[x_raw].is_known())
+                    {
+                        if (add_literal_value(x_lit))
+                            return true;
+                    }
                     changed = true;
-                    continue;
+                    continue; // Уравнение выполнено
                 }
-                // rule 6: x = 0 и y = 1 => z = 0
+                // Rule 6: x = 0 и y = 1 => z = 0
                 if (x_known && x_val == 0 && y_known && y_val == 1)
                 {
-                    literal z_lit(z_raw / 2, (z_raw % 2 == 0) ? 0 : 1);
-                    if (add_literal_value(z_lit))
-                        return true;
+                    literal z_lit(z_raw, 0);
+                    if (!params[z_raw].is_known())
+                    {
+                        if (add_literal_value(z_lit))
+                            return true;
+                    }
                     changed = true;
                     continue;
                 }
-                // rule 7: x = 0 и z = 1 => y = 0
+                // Rule 7: x = 0 и z = 1 => y = 0
                 if (x_known && x_val == 0 && z_known && z_val == 1)
                 {
-                    literal y_lit(y_raw / 2, (y_raw % 2 == 0) ? 0 : 1);
-                    if (add_literal_value(y_lit))
-                        return true;
+                    literal y_lit(y_raw, 0);
+                    if (!params[y_raw].is_known())
+                    {
+                        if (add_literal_value(y_lit))
+                            return true;
+                    }
+
                     changed = true;
                     continue;
                 }
-                // rule 2: y = 1 => equation превращается в x = z (линейное: x XOR z = 0)
+                // РЕДУКЦИЯ К ЛИНЕЙНЫМ УРАВНЕНИЯМ (Если прямой вывод не сработал)
+                // Rule 2: y = 1 => превращаем в линейное x XOR z = 0
                 if (y_known && y_val == 1)
                 {
-                    equation lin_eq;
-                    lin_eq.set_Is_line(true);
-                    lin_eq.set_ids({x_raw, z_raw});
+                    equation lin_eq(true, {x_raw, z_raw});
                     new_equations.push_back(lin_eq);
+
                     changed = true;
-                    continue;
+                    continue; // старое квадратичное заменено на линейное
                 }
-                // rule 3: z = 1 => equation превращается в x = y (линейное: x XOR y = 0)
+                // Rule 3: z = 1 => превращаем в линейное x XOR y = 0
                 if (z_known && z_val == 1)
                 {
-                    equation lin_eq;
-                    lin_eq.set_Is_line(true);
-                    lin_eq.set_ids({x_raw, y_raw});
+                    equation lin_eq(true, {x_raw, y_raw});
                     new_equations.push_back(lin_eq);
                     changed = true;
-                    continue;
+                    continue; // старое квадратичное заменено на линейное
                 }
-                // Если ни одно правило не сработало, оставляем квадратичное уравнение
-                new_equations.push_back(eq);
+                new_equations.push_back(eq); // если ни одно правило не сработало, оседает как есть
             }
             else
             {
@@ -369,7 +388,6 @@ bool MQS_system::add_literal_value(literal new_lit)
         params[new_lit.get_id() ^ 1] = literal(new_lit.get_id() ^ 1, new_lit.get_value() ^ 1);
         return 1;
     }
-
     params[new_lit.get_id()] = new_lit;
     params[new_lit.get_id() ^ 1] = literal(new_lit.get_id() ^ 1, new_lit.get_value() ^ 1);
 

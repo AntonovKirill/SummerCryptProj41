@@ -1,7 +1,7 @@
 #include "search_tree.hpp"
 #include <iostream>
 
-SearchNode::SearchNode(int n, int v, SearchNode* p)
+SearchNode::SearchNode(int n, int v, SearchNode *p)
 {
     num = n;
     val = v;
@@ -16,14 +16,13 @@ SearchNode::~SearchNode()
     delete right;
 }
 
-SearchTree::SearchTree(MQS_system& sys)
+SearchTree::SearchTree(MQS_system &sys)
 {
     system = &sys;
     steps = 0;
     root = nullptr;
-
     int maxId = 0;
-    for (const auto& lit : sys.params)
+    for (const auto &lit : sys.params)
     {
         if (lit.get_id() > maxId)
         {
@@ -31,9 +30,7 @@ SearchTree::SearchTree(MQS_system& sys)
         }
     }
     varCount = (maxId + 1) / 2;
-
     inputVars = sys.input_vars;
-
     saveState();
 }
 
@@ -53,122 +50,94 @@ void SearchTree::restoreState()
     {
         return;
     }
-
     stateStack.pop();
-
     if (!stateStack.empty())
     {
         applyState(stateStack.top());
     }
 }
 
-void SearchTree::applyState(const MQS_system& MQS_system1)
+void SearchTree::applyState(const MQS_system &MQS_system1)
 {
     system->params = MQS_system1.get_params();
     system->equations = MQS_system1.get_equations();
 }
 
-bool SearchTree::solve()
-{
-    root = new SearchNode(-1, -1, nullptr);
-    return backtrack(root);
-}
-
-bool SearchTree::backtrack(SearchNode* node)
+bool SearchTree::backtrack(SearchNode *node)
 {
     steps++;
-    static int v0;
-    v0++;
-
-    std::cout << "1 " << steps << " " << stateStack.size() << " " <<  std::endl;
-    saveState();
-
-    if (isComplete())
+    // std::cout << "1 " << steps << " " << stateStack.size() << " " << std::endl; // выводит номер текущего шага и размер стека состояний
+    if (checkSolution()) // сначала проверяем, выполнено ли текущее состояние (все уравнения исчезли)
     {
-        if (checkSolution())
-        {
-            std::cout << "2 solution " << steps << " " << stateStack.size() << std::endl;
-            return true;
-        }
-        restoreState();
-        std::cout << "3 " << steps << " contradiction" << std::endl;
-        return false;
+        // std::cout << "2 solution " << steps << " " << stateStack.size() << std::endl; // нашла решение вверху функции
+        return true;
     }
-
-    int v = v0;
-    std::cout << "4 branching " << v << " = 0" << std::endl;
-    
-     //if (v == -1)
-     //{
-     //    restoreState();
-     //    return false;
-     //}
-
-    literal lit0(2 * v, 0);
-    if (!system->unit_propagation(lit0))
+    // выбираем следующую еще не назначенную переменную
+    int v = selectVariable();
+    if (v == -1) // свободных переменных нет
     {
-        SearchNode* child0 = new SearchNode(v, 0, node);
+        return false; // неназначенных переменных не осталось (или осталась невязка в уравнениях)
+    }
+    // ВЕТВЬ 0 (x_i = 0)
+    saveState(); // сохраняме текущее состояние системы
+    // std::cout << "4 branching " << v << " = 0" << std::endl; // решение о ветвлении 0
+    literal lit0(2 * v, 0);
+    if (!system->unit_propagation(lit0)) // если unit_prop не вернул ошибку
+    {
+        SearchNode *child0 = new SearchNode(v, 0, node);
         node->left = child0;
         if (backtrack(child0))
         {
-            std::cout << "5 solution " << steps << " " << stateStack.size() << std::endl;
-            return true;
+            return true; // тут еще был маркер успешного возврата (номер 5), я его убрала
         }
         delete child0;
         node->left = nullptr;
     }
     restoreState();
-
+    // ВЕТВЬ 1 (x_i = 1)
     saveState();
-    std::cout << "6 branching " << v << " = 1" << std::endl;
+    // std::cout << "6 branching " << v << " = 1" << std::endl; // выбрали ветку 1
     literal lit1(2 * v, 1);
     if (!system->unit_propagation(lit1))
     {
-        SearchNode* child1 = new SearchNode(v, 1, node);
+        SearchNode *child1 = new SearchNode(v, 1, node);
         node->right = child1;
         if (backtrack(child1))
         {
-            std::cout << "7 solution " << steps << " " << stateStack.size() << std::endl;
-            return true;
+            return true; // тут еще был маркер успешного возврата (номер 7), я его убрала
         }
         delete child1;
         node->right = nullptr;
     }
-    
     restoreState();
-    v0--;
-    std::cout << "8 " << steps << " contradiction" << std::endl;
+    // std::cout << "8 " << steps << " contradiction" << std::endl; // маркер противоречия/тупика
     return false;
 }
 
 bool SearchTree::isComplete() const
 {
-    const auto& params = system->params;
-
-    for (int inputVarId : inputVars)
+    for (int i = 1; i < varCount; ++i)
     {
-        int varIndex = inputVarId / 2;
-        bool found = false;
-        for (const auto& lit : params)
+        int raw_id = 2 * i;
+        if (raw_id < (int)system->params.size())
         {
-            if (lit.get_id() == 2 * varIndex && lit.is_known())
+            if (!system->params[raw_id].is_known())
             {
-                found = true;
-                break;
+                return false;
             }
         }
-        if (!found)
-        {
-            return false;
-        }
     }
-
     return true;
 }
 
 bool SearchTree::checkSolution() const
 {
-    for (const auto& eq : system->equations)
+    if (system->equations.empty()) // Если уравнений не осталось вообще — решение точно найдено!
+    {
+        return true;
+    }
+    // Проверяем все оставшиеся уравнения
+    for (const auto &eq : system->equations)
     {
         if (!checkEquation(eq))
         {
@@ -178,47 +147,61 @@ bool SearchTree::checkSolution() const
     return true;
 }
 
-bool SearchTree::checkEquation(const equation& eq) const
+bool SearchTree::solve()
 {
-    int xorSum = 0;
+    // проверяем, решена ли система прямо на старте (включая unit_propagation)
+    if (checkSolution())
+    {
+        return true;
+    }
+    // запускаем поиск
+    SearchNode *rootNode = new SearchNode(0, 0, nullptr);
+    root = rootNode;
+    return backtrack(rootNode);
+}
 
+bool SearchTree::checkEquation(const equation &eq) const
+{
+    // КВАДРАТИЧНОЕ УРАВНЕНИЕ (x = y AND z)
+    if (!eq.get_Is_line() && eq.ids.size() == 3)
+    {
+        int y_raw = eq.ids[0]; // 2 (x1)
+        int z_raw = eq.ids[1]; // 4 (x2)
+        int x_raw = eq.ids[2]; // 6 (x3)
+        int y_val = system->params[y_raw].get_value() ^ (y_raw % 2);
+        int z_val = system->params[z_raw].get_value() ^ (z_raw % 2);
+        int x_val = system->params[x_raw].get_value() ^ (x_raw % 2);
+        return x_val == (y_val & z_val);
+    }
+    // ЛИНЕЙНОЕ УРАВНЕНИЕ (XOR)
+    int xorSum = 0;
     for (int rawId : eq.ids)
     {
-        int var = rawId / 2;
-        int litId = 2 * var;
-
-        bool known = false;
-        int val = 0;
-        for (const auto& lit : system->params)
-        {
-            if (lit.get_id() == litId && lit.is_known())
-            {
-                known = true;
-                val = lit.get_value();
-                break;
-            }
-        }
-        if (!known)
+        if (!system->params[rawId].is_known())
         {
             return false;
         }
-
+        int val = system->params[rawId].get_value();
         if (rawId % 2 == 1)
         {
             val = 1 - val;
         }
         xorSum ^= val;
     }
-
+    // Линейные уравнения из 1 элемента (секция "lin 1") равны 1.
+    // Если в уравнении больше элементов (XOR = 0), проверяем на 0.
+    if (eq.ids.size() == 1)
+    {
+        return xorSum == 1;
+    }
     return xorSum == 0;
 }
 
 int SearchTree::selectVariable() const
 {
-    const auto& params = system->params;
-
+    const auto &params = system->params;
     std::vector<bool> known(varCount, false);
-    for (const auto& lit : params)
+    for (const auto &lit : params)
     {
         int id = lit.get_id();
         if (id % 2 == 0 && id / 2 < varCount && lit.is_known())
@@ -226,7 +209,6 @@ int SearchTree::selectVariable() const
             known[id / 2] = true;
         }
     }
-
     std::vector<bool> isInput(varCount, false);
     for (int inputVarId : inputVars)
     {
@@ -236,21 +218,19 @@ int SearchTree::selectVariable() const
             isInput[varIndex] = true;
         }
     }
-
     std::vector<int> freq(varCount, 0);
-    for (const auto& eq : system->equations)
+    for (const auto &eq : system->equations)
     {
         for (int rawId : eq.ids)
         {
             int v = rawId / 2;
-            
+
             if (v < varCount && !known[v] && isInput[v])
             {
                 freq[v]++;
             }
         }
     }
-
     int best = -1;
     int bestFreq = -1;
     for (int i = 0; i < varCount; ++i)
@@ -261,12 +241,10 @@ int SearchTree::selectVariable() const
             best = i;
         }
     }
-
     if (best != -1)
     {
         return best;
     }
-
     for (int i = 0; i < varCount; ++i)
     {
         if (isInput[i] && !known[i])
@@ -274,17 +252,15 @@ int SearchTree::selectVariable() const
             return i;
         }
     }
-
     return -1;
 }
 
 void SearchTree::printSolution() const
 {
     std::cout << "Решение найдено!" << std::endl;
-    const auto& params = system->params;
-
+    const auto &params = system->params;
     std::vector<int> solution(varCount, -1);
-    for (const auto& lit : params)
+    for (const auto &lit : params)
     {
         int id = lit.get_id();
         if (id % 2 == 0 && id / 2 < varCount && lit.is_known())
@@ -292,8 +268,7 @@ void SearchTree::printSolution() const
             solution[id / 2] = lit.get_value();
         }
     }
-
-    for (int i = 0; i < varCount; ++i)
+    for (int i = 1; i < varCount; ++i)
     {
         if (solution[i] != -1)
         {
@@ -301,7 +276,7 @@ void SearchTree::printSolution() const
         }
         else
         {
-            std::cout << "x" << i << " = ? (не назначена)" << std::endl;
+            std::cout << "x" << i << " = 0 (свободная)" << std::endl; // Свободная переменная: выводим по умолчанию 0 (с пометкой свободного выбора)
         }
     }
     std::cout << "Количество шагов: " << steps << std::endl;
