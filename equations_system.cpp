@@ -209,11 +209,21 @@ bool MQS_system::unit_propagation(literal &x)
                 {
                     remaining_ids[0] ^= 1;
                 }
-                if (remaining_ids.size() == 1) // если остался ровно 1 литерал (например, raw_id = 6)
+                if (remaining_ids.size() == 1)
                 {
                     int single_raw = remaining_ids[0];
-                    literal single_lit(single_raw, 1);
-                    if (!params[single_raw].is_known())
+                    int target_var = single_raw & -2;
+                    uint8_t target_val;
+                    if (single_raw % 2 != 0)
+                    {
+                        target_val = 1;
+                    }
+                    else
+                    {
+                        target_val = 0;
+                    }
+                    literal single_lit(target_var, target_val);
+                    if (!params[target_var].is_known())
                     {
                         if (add_literal_value(single_lit))
                             return true;
@@ -221,6 +231,7 @@ bool MQS_system::unit_propagation(literal &x)
                     changed = true;
                     continue;
                 }
+
                 eq.set_ids(remaining_ids);
                 new_equations.push_back(eq);
             }
