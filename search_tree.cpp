@@ -1,6 +1,5 @@
 #include "search_tree.hpp"
 #include <iostream>
-#include <algorithm>
 
 SearchNode::SearchNode(int n, int v, SearchNode* p)
 {
@@ -45,7 +44,7 @@ SearchTree::~SearchTree()
 
 void SearchTree::saveState()
 {
-    stateStack.push({system->params, system->equations});
+    stateStack.push(*system);
 }
 
 void SearchTree::restoreState()
@@ -59,15 +58,14 @@ void SearchTree::restoreState()
 
     if (!stateStack.empty())
     {
-        applyState(stateStack.top().first, stateStack.top().second);
+        applyState(stateStack.top());
     }
 }
 
-void SearchTree::applyState(const std::vector<literal>& params,
-                            const std::vector<equation>& equations)
+void SearchTree::applyState(const MQS_system& MQS_system1)
 {
-    system->params = params;
-    system->equations = equations;
+    system->params = MQS_system1.get_params();
+    system->equations = MQS_system1.get_equations();
 }
 
 bool SearchTree::solve()
@@ -79,6 +77,8 @@ bool SearchTree::solve()
 bool SearchTree::backtrack(SearchNode* node)
 {
     steps++;
+    static int v0;
+    v0++;
 
     std::cout << "1 " << steps << " " << stateStack.size() << " " <<  std::endl;
     saveState();
@@ -95,14 +95,14 @@ bool SearchTree::backtrack(SearchNode* node)
         return false;
     }
 
-    int v = selectVariable();
+    int v = v0;
     std::cout << "4 branching " << v << " = 0" << std::endl;
     
-    // if (v == -1)
-    // {
-    //     restoreState();
-    //     return false;
-    // }
+     //if (v == -1)
+     //{
+     //    restoreState();
+     //    return false;
+     //}
 
     literal lit0(2 * v, 0);
     if (!system->unit_propagation(lit0))
@@ -117,9 +117,9 @@ bool SearchTree::backtrack(SearchNode* node)
         delete child0;
         node->left = nullptr;
     }
-    // restoreState();
+    restoreState();
 
-    // saveState();
+    saveState();
     std::cout << "6 branching " << v << " = 1" << std::endl;
     literal lit1(2 * v, 1);
     if (!system->unit_propagation(lit1))
@@ -136,6 +136,7 @@ bool SearchTree::backtrack(SearchNode* node)
     }
     
     restoreState();
+    v0--;
     std::cout << "8 " << steps << " contradiction" << std::endl;
     return false;
 }
