@@ -1,9 +1,6 @@
 #ifndef SEARCH_TREE_HPP
 #define SEARCH_TREE_HPP
 
-#include <vector>
-#include <stack>
-#include <utility>
 #include "equations_system.hpp"
 
 class SearchNode
@@ -27,14 +24,14 @@ public:
     int steps;
     MQS_system* system;
 
-    std::stack< std::pair< std::vector<literal>, std::vector<equation> > > stateStack;
+    std::stack< MQS_system > stateStack;
 
     std::vector<int> inputVars;
 
     bool checkEquation(const equation& eq) const;
     void saveState();
     void restoreState();
-    void applyState(const std::vector<literal>& params, const std::vector<equation>& equations);
+    void applyState(const MQS_system& MQS_system1);
 
     SearchTree(MQS_system& sys);
     ~SearchTree();
