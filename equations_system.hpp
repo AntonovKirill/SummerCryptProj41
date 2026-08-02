@@ -5,9 +5,12 @@
 #include <cstdint>   //std::uint8_t
 #include <string>    //std::string
 #include <vector>    //std::vector
+#include <stack>     //std::stack
 #include <map>       //std::map
 #include <algorithm> //std::swap
 #include <cmath>     //std::pow
+#include <utility>   //pair
+#include <algorithm> //sort
 
 class literal
 {
@@ -121,7 +124,7 @@ public:
     std::vector<literal> get_params() const;
     std::vector<equation> get_equations() const;
 
-    bool unit_propagation(literal &x); // Эта функция возвращает объект системы сокращенный с использоавнием имеющихся данных.
+    bool unit_propagation(literal &x); // Эта функция сокращает объект системы с использоавнием имеющихся данных.
 
     void add_equation(equation eq);
     // Эта функция предназначена для добавления нового уравнения в объект системы.
